@@ -114,28 +114,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 switch (targetId) {
-                    case 'dashboard-section':
+                    case 'dashboard-content':
                         if (typeof initializeDashboard === 'function') {
                             initializeDashboard();
                         } else {
                             console.warn('Dashboard initialization function not found');
                         }
                         break;
-                    case 'algorithms-section':
+                    case 'algorithms-content':
                         if (typeof loadAlgorithms === 'function') {
                             loadAlgorithms();
                         } else {
                             console.warn('Algorithms loading function not found');
                         }
                         break;
-                    case 'backtest-section':
+                    case 'backtest-content':
                         if (typeof initializeBacktestForm === 'function') {
                             initializeBacktestForm();
                         } else {
                             console.warn('Backtest form initialization function not found');
                         }
                         break;
-                    case 'trading-section':
+                    case 'trading-content':
                         if (typeof initializeTradingForm === 'function') {
                             initializeTradingForm();
                         } else {

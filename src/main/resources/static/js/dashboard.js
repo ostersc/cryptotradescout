@@ -102,6 +102,27 @@ function initializeDashboard() {
                     healthElement.textContent = 'Connection Issue';
                     healthElement.className = 'badge bg-danger';
                 }
+                
+                // Show a user-friendly message in the dashboard area
+                const marketDataContent = document.getElementById('market-data-content');
+                if (marketDataContent) {
+                    marketDataContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <h5>Trading API Connection Issue</h5>
+                            <p>${result.message}</p>
+                            <button id="retry-api-connection" class="btn btn-sm btn-primary">Retry Connection</button>
+                        </div>
+                    `;
+                    
+                    // Add retry functionality
+                    const retryButton = document.getElementById('retry-api-connection');
+                    if (retryButton) {
+                        retryButton.addEventListener('click', () => {
+                            updateMarketData();
+                            flashUpdateIndicator();
+                        });
+                    }
+                }
             } else {
                 // Update with success message
                 if (statusElement) {
@@ -109,7 +130,47 @@ function initializeDashboard() {
                     statusElement.className = 'badge bg-success';
                 }
             }
+        }).catch(error => {
+            console.error('Error checking API availability:', error);
+            
+            // Handle the error by updating UI
+            const statusElement = document.getElementById('trading-status');
+            if (statusElement) {
+                statusElement.textContent = 'API Error';
+                statusElement.className = 'badge bg-danger';
+            }
         });
+        
+        // Initialize event listeners for exchange and trading pair selectors
+        const exchangeSelector = document.getElementById('exchange-selector');
+        const tradingPairSelector = document.getElementById('trading-pair-selector');
+        
+        if (exchangeSelector && tradingPairSelector) {
+            // Ensure we have options in the selectors
+            if (exchangeSelector.options.length === 0) {
+                const exchanges = ['Coinbase', 'Kraken'];
+                exchanges.forEach(exchange => {
+                    const option = document.createElement('option');
+                    option.value = exchange.toLowerCase();
+                    option.textContent = exchange;
+                    exchangeSelector.appendChild(option);
+                });
+            }
+            
+            if (tradingPairSelector.options.length === 0) {
+                const pairs = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'AVAX/USD'];
+                pairs.forEach(pair => {
+                    const option = document.createElement('option');
+                    option.value = pair;
+                    option.textContent = pair;
+                    tradingPairSelector.appendChild(option);
+                });
+            }
+            
+            // Set up event listeners
+            exchangeSelector.addEventListener('change', updateMarketData);
+            tradingPairSelector.addEventListener('change', updateMarketData);
+        }
         
         // Initialize price chart
         initializePriceChart();

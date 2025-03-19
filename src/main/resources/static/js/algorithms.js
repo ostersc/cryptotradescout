@@ -6,20 +6,52 @@
  * Loads the algorithms from the API and displays them
  */
 function loadAlgorithms() {
-    fetch('/api/algorithms')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(algorithms => {
-            displayAlgorithms(algorithms);
-            populateAlgorithmDropdowns(algorithms);
-        })
-        .catch(error => {
-            console.error('Error fetching algorithms:', error);
-        });
+    try {
+        console.log('Loading algorithms...');
+        
+        // First try to fetch from the API
+        fetch('/api/algorithms')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(algorithms => {
+                displayAlgorithms(algorithms);
+                populateAlgorithmDropdowns(algorithms);
+            })
+            .catch(error => {
+                console.error('Error fetching algorithms from API, using sample data:', error);
+                
+                // Use sample data if API fails
+                const sampleAlgorithms = [
+                    {
+                        id: 'simple-moving-average',
+                        name: 'Simple Moving Average Crossover',
+                        description: 'Uses simple moving average crossovers to determine buy and sell signals.',
+                        parameters: [
+                            { name: 'shortPeriod', type: 'number', defaultValue: 10 },
+                            { name: 'longPeriod', type: 'number', defaultValue: 30 }
+                        ]
+                    },
+                    {
+                        id: 'arbitrage',
+                        name: 'Exchange Arbitrage',
+                        description: 'Exploits price differences between exchanges for the same asset.',
+                        parameters: [
+                            { name: 'minProfitPercentage', type: 'number', defaultValue: 1.5 },
+                            { name: 'maxTransactionFee', type: 'number', defaultValue: 0.5 }
+                        ]
+                    }
+                ];
+                
+                displayAlgorithms(sampleAlgorithms);
+                populateAlgorithmDropdowns(sampleAlgorithms);
+            });
+    } catch (error) {
+        console.error('Critical error in loadAlgorithms:', error);
+    }
 }
 
 /**
