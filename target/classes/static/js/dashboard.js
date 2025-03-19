@@ -12,25 +12,66 @@ let systemUptime = 0;
 let uptimeInterval = null;
 
 /**
- * Checks if API endpoints are available
- * @returns {Promise<boolean>} True if API is available, false otherwise
+ * Checks if API endpoints are available with improved error handling
+ * @returns {Promise<{available: boolean, message: string}>} Object with availability status and message
  */
 async function checkApiAvailability() {
     try {
         console.log('Checking API availability...');
         
-        const response = await fetch('/api/trading/system-status');
+        // Set a timeout for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch('/api/trading/system-status', {
+            signal: controller.signal
+        });
+        
+        // Clear the timeout
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
-            console.error(`API status check failed: ${response.status} ${response.statusText}`);
-            return false;
+            const errorMsg = `API status check failed: ${response.status} ${response.statusText}`;
+            console.error(errorMsg);
+            
+            let userMessage = 'Server error. ';
+            
+            // Provide more specific messages based on status code
+            if (response.status === 401 || response.status === 403) {
+                userMessage += 'Authentication required.';
+            } else if (response.status === 404) {
+                userMessage += 'Service endpoint not found.';
+            } else if (response.status >= 500) {
+                userMessage += 'Trading server unavailable.';
+            }
+            
+            return { 
+                available: false, 
+                message: userMessage 
+            };
         }
         
         console.log('API is available');
-        return true;
+        return { 
+            available: true, 
+            message: 'All systems operational'
+        };
     } catch (error) {
-        console.error('API availability check failed:', error);
-        return false;
+        let errorMessage = 'API availability check failed';
+        
+        // Provide clearer error messages based on error type
+        if (error.name === 'AbortError') {
+            errorMessage = 'API request timed out';
+        } else if (error.message.includes('NetworkError')) {
+            errorMessage = 'Network connection issue';
+        }
+        
+        console.error(`${errorMessage}:`, error);
+        
+        return { 
+            available: false, 
+            message: errorMessage
+        };
     }
 }
 
@@ -41,16 +82,31 @@ function initializeDashboard() {
     try {
         console.log('Initializing dashboard...');
         
-        // Check API availability
-        checkApiAvailability().then(isAvailable => {
-            if (!isAvailable) {
-                console.warn('API is not available. Some features may not work properly.');
+        // Check API availability with the improved implementation
+        checkApiAvailability().then(result => {
+            // Display API status to the user
+            const statusElement = document.getElementById('trading-status');
+            
+            if (!result.available) {
+                console.warn(`API is not available: ${result.message}`);
                 
-                // Display a message to the user
-                const statusElement = document.getElementById('trading-status');
+                // Update the status display with the specific error message
                 if (statusElement) {
-                    statusElement.textContent = 'API Unavailable';
+                    statusElement.textContent = 'API: ' + result.message;
                     statusElement.className = 'badge bg-danger';
+                }
+                
+                // Also update system health indicator if it exists
+                const healthElement = document.getElementById('system-health');
+                if (healthElement) {
+                    healthElement.textContent = 'Connection Issue';
+                    healthElement.className = 'badge bg-danger';
+                }
+            } else {
+                // Update with success message
+                if (statusElement) {
+                    statusElement.textContent = 'API Connected';
+                    statusElement.className = 'badge bg-success';
                 }
             }
         });
