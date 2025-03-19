@@ -74,13 +74,24 @@ public class TradingService {
      * @return a Mono containing the market data
      */
     public Mono<MarketData> getMarketData(String exchange, String tradingPair) {
+        logger.debug("TradingService.getMarketData called with exchange={}, tradingPair={}", exchange, tradingPair);
+        
         ExchangeService exchangeService = findExchangeService(exchange);
         if (exchangeService == null) {
-            return Mono.empty();
+            logger.error("Exchange service not found for: {}", exchange);
+            return Mono.error(new RuntimeException("Exchange service not found: " + exchange));
         }
         
+        logger.debug("Found exchange service: {}", exchangeService.getExchangeName());
+        
         return exchangeService.getCurrentMarketData(tradingPair)
-                .doOnNext(data -> saveMarketData(data));
+                .doOnNext(data -> {
+                    logger.debug("Received market data: {}", data);
+                    saveMarketData(data);
+                })
+                .doOnError(error -> {
+                    logger.error("Error getting market data from {}: {}", exchange, error.getMessage(), error);
+                });
     }
     
     /**
@@ -241,13 +252,20 @@ public class TradingService {
      * @return the exchange service, or null if not found
      */
     private ExchangeService findExchangeService(String exchange) {
+        logger.debug("Looking for exchange: {}", exchange);
+        logger.debug("Available exchanges: {}", exchangeServices.size());
+        
+        StringBuilder availableExchanges = new StringBuilder("Available exchanges: ");
         for (ExchangeService service : exchangeServices.values()) {
+            availableExchanges.append(service.getExchangeName()).append(", ");
+            logger.debug("Checking exchange service: {}", service.getExchangeName());
             if (service.getExchangeName().equalsIgnoreCase(exchange)) {
+                logger.info("Found matching exchange service: {}", service.getExchangeName());
                 return service;
             }
         }
         
-        logger.error("Exchange not found: {}", exchange);
+        logger.error("Exchange not found: {}. {}", exchange, availableExchanges);
         return null;
     }
     

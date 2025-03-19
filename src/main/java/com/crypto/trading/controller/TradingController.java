@@ -50,7 +50,15 @@ public class TradingController {
         logger.info("Request for market data: {} on {}", tradingPair, exchange);
         
         return tradingService.getMarketData(exchange, tradingPair)
+                .doOnNext(data -> logger.info("Received market data successfully: {}", data))
                 .map(ResponseEntity::ok)
+                .doOnError(e -> logger.error("Error getting market data: {}", e.getMessage(), e))
+                .onErrorResume(e -> {
+                    logger.error("Handling error in controller: {}", e.getMessage());
+                    return Mono.just(ResponseEntity.status(500)
+                        .body(new MarketData(tradingPair, 0, 0, 0, 0, 
+                               java.time.LocalDateTime.now(), "Error: " + e.getMessage())));
+                })
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
     

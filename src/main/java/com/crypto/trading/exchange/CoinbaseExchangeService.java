@@ -42,12 +42,23 @@ public class CoinbaseExchangeService implements ExchangeService {
     @Value("${exchange.coinbase.api.url}")
     private String apiBaseUrl;
 
+    private final WebClient.Builder webClientBuilder;
+
     /**
      * Constructor for CoinbaseExchangeService.
      * 
      * @param webClientBuilder WebClient.Builder for creating the WebClient
      */
     public CoinbaseExchangeService(WebClient.Builder webClientBuilder) {
+        this.webClientBuilder = webClientBuilder;
+        this.webClient = null; // Will be initialized in initWebClient
+    }
+    
+    /**
+     * Initialize the WebClient after properties are loaded.
+     */
+    @jakarta.annotation.PostConstruct
+    public void initWebClient() {
         this.webClient = webClientBuilder
                 .baseUrl(apiBaseUrl)
                 .build();

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -18,6 +19,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,9 +58,11 @@ public class KrakenExchangeService implements ExchangeService {
      */
     @jakarta.annotation.PostConstruct
     public void initWebClient() {
+        logger.info("Initializing Kraken WebClient with base URL: {}", apiBaseUrl);
         this.webClient = webClientBuilder
                 .baseUrl(apiBaseUrl)
                 .build();
+        logger.info("Kraken WebClient initialized successfully");
     }
 
     @Override
@@ -68,20 +72,41 @@ public class KrakenExchangeService implements ExchangeService {
 
     @Override
     public Mono<MarketData> getCurrentMarketData(String tradingPair) {
-        logger.info("Fetching current market data for {}", tradingPair);
+        logger.info("Fetching current market data for {} - WebClient: {}", tradingPair, webClient);
+        
+        if (webClient == null) {
+            logger.error("WebClient is null. Initializing now...");
+            initWebClient();
+            if (webClient == null) {
+                logger.error("Failed to initialize WebClient!");
+                return Mono.error(new RuntimeException("WebClient is not initialized"));
+            }
+        }
         
         String krakenPair = formatKrakenPair(tradingPair);
+        logger.info("Formatted Kraken pair: {} for original pair: {}", krakenPair, tradingPair);
         
         return webClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/0/public/Ticker")
-                        .queryParam("pair", krakenPair)
-                        .build())
+                .uri(uriBuilder -> {
+                    logger.info("Building URI for Kraken API call with base URL: {}", apiBaseUrl);
+                    return uriBuilder
+                            .path("/0/public/Ticker")
+                            .queryParam("pair", krakenPair)
+                            .build();
+                })
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .bodyToMono(JsonNode.class)
+                .doOnNext(response -> logger.info("Received response from Kraken API: {}", response))
                 .map(response -> parseMarketData(response, tradingPair))
-                .doOnError(e -> logger.error("Error fetching market data from Kraken: {}", e.getMessage()));
+                .doOnSuccess(marketData -> logger.info("Successfully parsed market data: {}", marketData))
+                .doOnError(e -> {
+                    logger.error("Error fetching market data from Kraken: {}", e.getMessage(), e);
+                    if (e instanceof WebClientResponseException) {
+                        WebClientResponseException wcre = (WebClientResponseException) e;
+                        logger.error("HTTP Status: {}, Response body: {}", wcre.getStatusCode(), wcre.getResponseBodyAsString());
+                    }
+                });
     }
 
     @Override
@@ -171,7 +196,9 @@ public class KrakenExchangeService implements ExchangeService {
     // Helper methods
     
     private String formatKrakenPair(String pair) {
-        // Convert standard pair format (e.g., BTC-USD) to Kraken format (e.g., XBTUSD)
+        // Convert standard pair format (e.g., BTC-USD) to Kraken format (e.g., XXBTZUSD)
+        logger.debug("Formatting pair: {}", pair);
+        
         String[] parts = pair.split("-");
         if (parts.length != 2) {
             throw new IllegalArgumentException("Invalid trading pair format: " + pair);
@@ -181,78 +208,147 @@ public class KrakenExchangeService implements ExchangeService {
         String base = parts[0].equals("BTC") ? "XBT" : parts[0];
         String quote = parts[1];
         
-        return base + quote;
+        // Kraken uses 'X' prefix for most crypto assets and 'Z' prefix for fiat currencies
+        String formattedBase = (base.equals("XBT") || base.equals("ETH") || base.equals("XDG")) ? "X" + base : base;
+        String formattedQuote = (quote.equals("USD") || quote.equals("EUR") || quote.equals("GBP") || quote.equals("JPY")) ? "Z" + quote : quote;
+        
+        String result = formattedBase + formattedQuote;
+        logger.debug("Formatted Kraken pair: {} -> {}", pair, result);
+        return result;
     }
     
     private MarketData parseMarketData(JsonNode response, String originalPair) {
         // Check for errors in the response
-        if (response.has("error") && response.get("error").size() > 0) {
+        if (response.has("error") && response.get("error").size() > 0 && !response.get("error").isEmpty()) {
             throw new RuntimeException("Kraken API error: " + response.get("error").toString());
         }
         
         String krakenPair = formatKrakenPair(originalPair);
-        JsonNode result = response.get("result").get(krakenPair);
+        JsonNode result = response.get("result");
+        logger.debug("Full result from Kraken API: {}", result);
         
-        if (result == null) {
-            throw new RuntimeException("No data found for pair: " + originalPair);
+        // Get first key if krakenPair is not found directly
+        if (!result.has(krakenPair)) {
+            logger.debug("Exact key {} not found in result, checking available keys", krakenPair);
+            // Iterate through keys to find possible match
+            if (result.size() > 0) {
+                // Get first key (should be the pair we requested)
+                String firstKey = result.fieldNames().next();
+                logger.debug("Using first available key in response: {}", firstKey);
+                krakenPair = firstKey;
+            } else {
+                throw new RuntimeException("No data found for pair: " + originalPair);
+            }
         }
         
-        double ask = Double.parseDouble(result.get("a").get(0).asText());
-        double bid = Double.parseDouble(result.get("b").get(0).asText());
-        double last = Double.parseDouble(result.get("c").get(0).asText());
-        double volume = Double.parseDouble(result.get("v").get(1).asText());
+        JsonNode pairData = result.get(krakenPair);
+        if (pairData == null) {
+            throw new RuntimeException("No data found for pair: " + originalPair + " using key: " + krakenPair);
+        }
         
-        return new MarketData(
-                originalPair,
-                bid,
-                ask,
-                last,
-                volume,
-                LocalDateTime.now(),
-                getExchangeName()
-        );
+        logger.debug("Found pair data: {}", pairData);
+        
+        try {
+            double ask = Double.parseDouble(pairData.get("a").get(0).asText());
+            double bid = Double.parseDouble(pairData.get("b").get(0).asText());
+            double last = Double.parseDouble(pairData.get("c").get(0).asText());
+            double volume = Double.parseDouble(pairData.get("v").get(1).asText());
+            
+            MarketData data = new MarketData(
+                    originalPair,
+                    bid,
+                    ask,
+                    last,
+                    volume,
+                    LocalDateTime.now(),
+                    getExchangeName()
+            );
+            
+            logger.info("Successfully parsed market data: {}", data);
+            return data;
+        } catch (Exception e) {
+            logger.error("Error parsing market data: {}", e.getMessage(), e);
+            throw new RuntimeException("Error parsing market data: " + e.getMessage(), e);
+        }
     }
     
     private List<MarketData> parseHistoricalMarketData(JsonNode response, String originalPair, long startTime, long endTime) {
         // Check for errors in the response
-        if (response.has("error") && response.get("error").size() > 0) {
+        if (response.has("error") && response.get("error").size() > 0 && !response.get("error").isEmpty()) {
             throw new RuntimeException("Kraken API error: " + response.get("error").toString());
         }
         
         String krakenPair = formatKrakenPair(originalPair);
-        JsonNode ohlcData = response.get("result").get(krakenPair);
+        JsonNode result = response.get("result");
+        logger.debug("Full historical result from Kraken API: {}", result);
         
+        // Get first key if krakenPair is not found directly
+        if (!result.has(krakenPair)) {
+            logger.debug("Exact key {} not found in historical result, checking available keys", krakenPair);
+            // Iterate through keys to find possible match
+            if (result.size() > 0) {
+                // Skip the 'last' field which is not the OHLC data
+                Iterator<String> fieldNames = result.fieldNames();
+                String firstKey = null;
+                while (fieldNames.hasNext()) {
+                    String key = fieldNames.next();
+                    if (!key.equals("last")) {
+                        firstKey = key;
+                        break;
+                    }
+                }
+                
+                if (firstKey != null) {
+                    logger.debug("Using key in historical response: {}", firstKey);
+                    krakenPair = firstKey;
+                } else {
+                    throw new RuntimeException("No valid OHLC data found for pair: " + originalPair);
+                }
+            } else {
+                throw new RuntimeException("No historical data found for pair: " + originalPair);
+            }
+        }
+        
+        JsonNode ohlcData = result.get(krakenPair);
         List<MarketData> marketDataList = new ArrayList<>();
         
         if (ohlcData != null && ohlcData.isArray()) {
             for (JsonNode candle : ohlcData) {
-                long timestamp = candle.get(0).asLong();
-                
-                // Only include data within the requested time range
-                if (timestamp >= startTime && timestamp <= endTime) {
-                    double open = Double.parseDouble(candle.get(1).asText());
-                    double high = Double.parseDouble(candle.get(2).asText());
-                    double low = Double.parseDouble(candle.get(3).asText());
-                    double close = Double.parseDouble(candle.get(4).asText());
-                    double volume = Double.parseDouble(candle.get(6).asText());
+                try {
+                    long timestamp = candle.get(0).asLong();
                     
-                    LocalDateTime dateTime = LocalDateTime.ofInstant(
-                            Instant.ofEpochSecond(timestamp), 
-                            ZoneId.systemDefault());
-                    
-                    marketDataList.add(new MarketData(
-                            originalPair,
-                            low,  // Using low as bid (approximation)
-                            high, // Using high as ask (approximation)
-                            close,
-                            volume,
-                            dateTime,
-                            getExchangeName()
-                    ));
+                    // Only include data within the requested time range
+                    if (timestamp >= startTime && timestamp <= endTime) {
+                        double open = Double.parseDouble(candle.get(1).asText());
+                        double high = Double.parseDouble(candle.get(2).asText());
+                        double low = Double.parseDouble(candle.get(3).asText());
+                        double close = Double.parseDouble(candle.get(4).asText());
+                        double volume = Double.parseDouble(candle.get(6).asText());
+                        
+                        LocalDateTime dateTime = LocalDateTime.ofInstant(
+                                Instant.ofEpochSecond(timestamp), 
+                                ZoneId.systemDefault());
+                        
+                        marketDataList.add(new MarketData(
+                                originalPair,
+                                low,  // Using low as bid (approximation)
+                                high, // Using high as ask (approximation)
+                                close,
+                                volume,
+                                dateTime,
+                                getExchangeName()
+                        ));
+                    }
+                } catch (Exception e) {
+                    logger.error("Error parsing historical candle data: {}", e.getMessage());
+                    // Continue with next candle instead of failing completely
                 }
             }
+        } else {
+            logger.warn("No OHLC array data found for key: {}", krakenPair);
         }
         
+        logger.info("Retrieved {} historical data points for {}", marketDataList.size(), originalPair);
         return marketDataList;
     }
     
@@ -349,12 +445,48 @@ public class KrakenExchangeService implements ExchangeService {
     }
     
     private String convertKrakenPairToStandard(String krakenPair) {
-        // This is a simplified conversion and may need to be expanded
-        if (krakenPair.startsWith("XBT")) {
-            return "BTC-" + krakenPair.substring(3);
+        logger.debug("Converting Kraken pair to standard format: {}", krakenPair);
+        
+        // Handle special cases with prefixes
+        if (krakenPair.startsWith("XXBT")) {
+            // XXBTZUSD -> BTC-USD
+            String quote = krakenPair.substring(4);
+            if (quote.startsWith("Z")) {
+                quote = quote.substring(1);
+            }
+            return "BTC-" + quote;
         }
-        // Default: assume 3-letter base and quote currencies
-        return krakenPair.substring(0, 3) + "-" + krakenPair.substring(3);
+        
+        // Handle X (crypto) prefix and Z (fiat) prefix
+        String base, quote;
+        
+        if (krakenPair.startsWith("X")) {
+            // XETHZUSD -> ETH-USD
+            base = krakenPair.substring(1, 4);
+        } else {
+            // First 3 or 4 characters depending on format
+            base = krakenPair.substring(0, Math.min(3, krakenPair.length()));
+        }
+        
+        // Handle special cases
+        if (base.equals("XBT")) {
+            base = "BTC";
+        }
+        
+        // Extract quote currency
+        int splitIndex = krakenPair.startsWith("X") ? 4 : 3;
+        if (splitIndex < krakenPair.length()) {
+            quote = krakenPair.substring(splitIndex);
+            if (quote.startsWith("Z")) {
+                quote = quote.substring(1);
+            }
+        } else {
+            quote = ""; // Fallback, should not happen with valid pairs
+        }
+        
+        String standardPair = base + "-" + quote;
+        logger.debug("Converted pair: {} -> {}", krakenPair, standardPair);
+        return standardPair;
     }
     
     private String convertKrakenStatus(String krakenStatus) {
