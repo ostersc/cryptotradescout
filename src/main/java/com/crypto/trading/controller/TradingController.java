@@ -265,3 +265,10 @@ public class TradingController {
         return null;
     }
 }
+@GetMapping("/system-status")
+    public ResponseEntity<Map<String, Object>> getSystemStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("status", "operational");
+        status.put("timestamp", LocalDateTime.now());
+        return ResponseEntity.ok(status);
+    }
