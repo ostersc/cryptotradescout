@@ -497,3 +497,49 @@ function formatCurrency(value) {
         currency: 'USD'
     }).format(value);
 }
+document.addEventListener('DOMContentLoaded', function() {
+    function initializeBacktestForm() {
+        const form = document.getElementById('backtest-form');
+        const loadingEl = document.getElementById('backtest-loading');
+        const resultsEl = document.getElementById('backtest-results-container');
+        const noResultsEl = document.getElementById('backtest-no-results');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loadingEl.classList.remove('d-none');
+            resultsEl.classList.add('d-none');
+            noResultsEl.classList.add('d-none');
+
+            try {
+                const formData = {
+                    algorithm: document.getElementById('backtest-algorithm').value,
+                    exchange: document.getElementById('backtest-exchange').value,
+                    pair: document.getElementById('backtest-pair').value,
+                    startTime: document.getElementById('backtest-start-time').value,
+                    endTime: document.getElementById('backtest-end-time').value,
+                    initialCapital: document.getElementById('backtest-initial-capital').value
+                };
+
+                const response = await fetch('/api/backtest', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) throw new Error('Backtest request failed');
+                
+                const results = await response.json();
+                displayResults(results);
+                resultsEl.classList.remove('d-none');
+            } catch (error) {
+                console.error('Backtest error:', error);
+                noResultsEl.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                noResultsEl.classList.remove('d-none');
+            } finally {
+                loadingEl.classList.add('d-none');
+            }
+        });
+    }
+
+    window.initializeBacktestForm = initializeBacktestForm;
+});
