@@ -1,42 +1,42 @@
 /**
- * Dashboard JavaScript file for handling the market data display and price chart
+ * Dashboard JavaScript file for handling the dashboard functionality
  */
 
-// Chart instance
+// Chart instance for price display
 let priceChart;
-// Price history for the chart
-let priceHistory = [];
-// Last price values to detect changes
-let lastValues = {
-    bid: null,
-    ask: null,
-    last: null
-};
-// Market data polling interval
-let marketDataInterval;
-// System status polling interval
-let systemStatusInterval;
+
+// Global variables for data tracking
+let marketDataHistory = [];
+let lastUpdateTime = null;
+let systemUptime = 0;
+let uptimeInterval = null;
 
 /**
  * Initializes the dashboard
  */
 function initializeDashboard() {
-    // Setup the price chart
+    // Initialize price chart
     initializePriceChart();
-    
-    // Add event listeners for exchange and trading pair selectors
-    document.getElementById('exchange-selector').addEventListener('change', updateMarketData);
-    document.getElementById('trading-pair-selector').addEventListener('change', updateMarketData);
-    
-    // Add event listeners for system control buttons
-    document.getElementById('start-trading-btn').addEventListener('click', startTrading);
-    document.getElementById('stop-trading-btn').addEventListener('click', stopTrading);
     
     // Start polling for market data
     startMarketDataPolling();
     
     // Start polling for system status
     startSystemStatusPolling();
+    
+    // Set up refresh button
+    document.getElementById('refresh-market-data').addEventListener('click', () => {
+        updateMarketData();
+        flashUpdateIndicator();
+    });
+    
+    // Set up trading buttons
+    document.getElementById('start-trading-btn').addEventListener('click', startTrading);
+    document.getElementById('stop-trading-btn').addEventListener('click', stopTrading);
+    
+    // Initialize system uptime
+    updateSystemUptime();
+    uptimeInterval = setInterval(updateSystemUptime, 1000);
 }
 
 /**
@@ -50,36 +50,46 @@ function initializePriceChart() {
         data: {
             labels: [],
             datasets: [{
-                label: 'Price',
+                label: 'Price (USD)',
                 data: [],
                 borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1,
-                pointRadius: 0
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                fill: true,
+                tension: 0.1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
+                title: {
+                    display: true,
+                    text: 'BTC/USD Price'
                 },
                 tooltip: {
-                    intersect: false,
-                    mode: 'index'
+                    callbacks: {
+                        label: function(context) {
+                            return formatCurrency(context.raw);
+                        }
+                    }
                 }
             },
             scales: {
                 x: {
-                    display: true,
                     title: {
-                        display: false
+                        display: true,
+                        text: 'Time'
                     }
                 },
                 y: {
-                    display: true,
                     title: {
-                        display: false
+                        display: true,
+                        text: 'Price (USD)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrency(value);
+                        }
                     }
                 }
             }
@@ -91,40 +101,30 @@ function initializePriceChart() {
  * Starts polling for market data
  */
 function startMarketDataPolling() {
-    // Clear any existing interval
-    if (marketDataInterval) {
-        clearInterval(marketDataInterval);
-    }
-    
-    // Initial update
+    // Update immediately
     updateMarketData();
     
-    // Set up polling every 5 seconds
-    marketDataInterval = setInterval(updateMarketData, 5000);
+    // Then update every 5 seconds
+    setInterval(updateMarketData, 5000);
 }
 
 /**
  * Starts polling for system status
  */
 function startSystemStatusPolling() {
-    // Clear any existing interval
-    if (systemStatusInterval) {
-        clearInterval(systemStatusInterval);
-    }
+    // Update system status every 10 seconds
+    setInterval(updateSystemStatus, 10000);
     
-    // Initial update
+    // Update immediately
     updateSystemStatus();
-    
-    // Set up polling every 10 seconds
-    systemStatusInterval = setInterval(updateSystemStatus, 10000);
 }
 
 /**
  * Updates the market data display
  */
 function updateMarketData() {
-    const exchange = document.getElementById('exchange-selector').value;
-    const tradingPair = document.getElementById('trading-pair-selector').value;
+    const exchange = document.getElementById('selected-exchange').value;
+    const tradingPair = document.getElementById('selected-pair').value;
     
     fetch(`/api/trading/market-data?exchange=${exchange}&tradingPair=${tradingPair}`)
         .then(response => {
@@ -135,7 +135,6 @@ function updateMarketData() {
         })
         .then(data => {
             updateMarketDataDisplay(data);
-            updatePriceChart(data);
         })
         .catch(error => {
             console.error('Error fetching market data:', error);
@@ -148,35 +147,49 @@ function updateMarketData() {
  * @param {Object} data - The market data object
  */
 function updateMarketDataDisplay(data) {
-    // Update price values
-    const bidPrice = document.getElementById('bid-price');
-    const askPrice = document.getElementById('ask-price');
-    const lastPrice = document.getElementById('last-price');
+    // Store in history (limit to 100 points)
+    marketDataHistory.push(data);
+    if (marketDataHistory.length > 100) {
+        marketDataHistory.shift();
+    }
     
-    // Format prices
-    const formattedBid = formatCurrency(data.bidPrice);
-    const formattedAsk = formatCurrency(data.askPrice);
-    const formattedLast = formatCurrency(data.lastPrice);
+    // Update price display
+    const lastPriceElement = document.getElementById('last-price');
+    const bidPriceElement = document.getElementById('bid-price');
+    const askPriceElement = document.getElementById('ask-price');
+    const volumeElement = document.getElementById('volume');
+    const timestampElement = document.getElementById('timestamp');
     
-    // Update DOM elements
-    bidPrice.textContent = formattedBid;
-    askPrice.textContent = formattedAsk;
-    lastPrice.textContent = formattedLast;
+    // Get previous values if available
+    const previousLastPrice = lastPriceElement.getAttribute('data-value') ? 
+        parseFloat(lastPriceElement.getAttribute('data-value')) : 0;
+    const previousBidPrice = bidPriceElement.getAttribute('data-value') ? 
+        parseFloat(bidPriceElement.getAttribute('data-value')) : 0;
+    const previousAskPrice = askPriceElement.getAttribute('data-value') ? 
+        parseFloat(askPriceElement.getAttribute('data-value')) : 0;
     
-    // Apply up/down classes for price change indication
-    updatePriceChangeIndicator(bidPrice, data.bidPrice, lastValues.bid);
-    updatePriceChangeIndicator(askPrice, data.askPrice, lastValues.ask);
-    updatePriceChangeIndicator(lastPrice, data.lastPrice, lastValues.last);
+    // Update elements
+    lastPriceElement.textContent = formatCurrency(data.lastPrice);
+    lastPriceElement.setAttribute('data-value', data.lastPrice);
+    updatePriceChangeIndicator(lastPriceElement, data.lastPrice, previousLastPrice);
     
-    // Update last values
-    lastValues.bid = data.bidPrice;
-    lastValues.ask = data.askPrice;
-    lastValues.last = data.lastPrice;
+    bidPriceElement.textContent = formatCurrency(data.bidPrice);
+    bidPriceElement.setAttribute('data-value', data.bidPrice);
+    updatePriceChangeIndicator(bidPriceElement, data.bidPrice, previousBidPrice);
     
-    // Update additional information
-    document.getElementById('volume').textContent = data.volume.toFixed(4);
-    document.getElementById('spread').textContent = `${formatCurrency(data.spread)} (${(data.spreadPercentage * 100).toFixed(4)}%)`;
-    document.getElementById('timestamp').textContent = formatTimestamp(data.timestamp);
+    askPriceElement.textContent = formatCurrency(data.askPrice);
+    askPriceElement.setAttribute('data-value', data.askPrice);
+    updatePriceChangeIndicator(askPriceElement, data.askPrice, previousAskPrice);
+    
+    volumeElement.textContent = data.volume.toFixed(4);
+    timestampElement.textContent = formatTimestamp(data.timestamp);
+    
+    // Update chart
+    updatePriceChart(data);
+    
+    // Update last update time
+    lastUpdateTime = new Date();
+    document.getElementById('last-update').textContent = lastUpdateTime.toLocaleTimeString();
     
     // Flash the update indicator
     flashUpdateIndicator();
@@ -188,25 +201,19 @@ function updateMarketDataDisplay(data) {
  * @param {Object} data - The market data object
  */
 function updatePriceChart(data) {
-    const timestamp = new Date(data.timestamp);
-    const formattedTime = timestamp.toLocaleTimeString();
+    // Add new data point to chart
+    const timestamp = new Date(data.timestamp).toLocaleTimeString();
     
-    // Add the new data point
-    priceHistory.push({
-        time: formattedTime,
-        price: data.lastPrice
-    });
+    priceChart.data.labels.push(timestamp);
+    priceChart.data.datasets[0].data.push(data.lastPrice);
     
-    // Keep only the last 20 data points
-    if (priceHistory.length > 20) {
-        priceHistory.shift();
+    // Limit to 20 visible points
+    if (priceChart.data.labels.length > 20) {
+        priceChart.data.labels.shift();
+        priceChart.data.datasets[0].data.shift();
     }
     
-    // Update chart data
-    priceChart.data.labels = priceHistory.map(item => item.time);
-    priceChart.data.datasets[0].data = priceHistory.map(item => item.price);
-    
-    // Update the chart
+    // Update chart
     priceChart.update();
 }
 
@@ -214,63 +221,71 @@ function updatePriceChart(data) {
  * Updates the system status
  */
 function updateSystemStatus() {
-    fetch('/api/trading/system-control', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ command: 'status' })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        const tradingStatus = document.getElementById('trading-status');
-        
-        if (data.active) {
-            tradingStatus.textContent = 'Active';
-            tradingStatus.className = 'badge bg-success';
-        } else {
-            tradingStatus.textContent = 'Inactive';
-            tradingStatus.className = 'badge bg-secondary';
-        }
-        
-        // For demo purposes, update the system uptime
-        updateSystemUptime();
-    })
-    .catch(error => {
-        console.error('Error fetching system status:', error);
-    });
+    fetch('/api/trading/system-status')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(statusData => {
+            // Update trading status
+            const tradingStatus = document.getElementById('trading-status');
+            const activeAlgorithm = document.getElementById('active-algorithm');
+            const tradingStartTime = document.getElementById('trading-start-time');
+            
+            if (statusData.isActive) {
+                tradingStatus.textContent = 'Active';
+                tradingStatus.className = 'badge bg-success';
+                activeAlgorithm.textContent = statusData.algorithm || 'Unknown';
+                tradingStartTime.textContent = formatTimestamp(statusData.startTime) || 'Unknown';
+                
+                // Enable stop button, disable start button
+                document.getElementById('stop-trading-btn').disabled = false;
+                document.getElementById('start-trading-btn').disabled = true;
+            } else {
+                tradingStatus.textContent = 'Inactive';
+                tradingStatus.className = 'badge bg-secondary';
+                activeAlgorithm.textContent = 'None';
+                tradingStartTime.textContent = '-';
+                
+                // Enable start button, disable stop button
+                document.getElementById('stop-trading-btn').disabled = true;
+                document.getElementById('start-trading-btn').disabled = false;
+            }
+            
+            // Update system health
+            const systemHealth = document.getElementById('system-health');
+            const memoryUsage = document.getElementById('memory-usage');
+            const cpuUsage = document.getElementById('cpu-usage');
+            
+            if (statusData.isHealthy) {
+                systemHealth.textContent = 'Healthy';
+                systemHealth.className = 'badge bg-success';
+            } else {
+                systemHealth.textContent = 'Issues Detected';
+                systemHealth.className = 'badge bg-warning';
+            }
+            
+            if (statusData.memoryUsage) {
+                memoryUsage.textContent = `${statusData.memoryUsage.toFixed(1)}%`;
+            }
+            
+            if (statusData.cpuUsage) {
+                cpuUsage.textContent = `${statusData.cpuUsage.toFixed(1)}%`;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching system status:', error);
+        });
 }
 
 /**
  * Starts the automated trading
  */
 function startTrading() {
-    fetch('/api/trading/system-control', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ command: 'start' })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        alert(data.message || 'Trading started successfully');
-        updateSystemStatus();
-    })
-    .catch(error => {
-        console.error('Error starting trading:', error);
-        alert('Failed to start trading. See console for details.');
-    });
+    // Redirect to trading tab
+    document.getElementById('trading-tab').click();
 }
 
 /**
@@ -308,29 +323,35 @@ function stopTrading() {
  * @param {number} previousValue - The previous price value
  */
 function updatePriceChangeIndicator(element, currentValue, previousValue) {
-    // Remove existing classes
-    element.classList.remove('up', 'down');
-    
-    // If there's a previous value, compare and add appropriate class
-    if (previousValue !== null) {
-        if (currentValue > previousValue) {
-            element.classList.add('up');
-        } else if (currentValue < previousValue) {
-            element.classList.add('down');
-        }
+    if (previousValue === 0) {
+        return;
     }
+    
+    const priceChange = currentValue - previousValue;
+    
+    if (priceChange > 0) {
+        element.classList.remove('negative-change');
+        element.classList.add('positive-change');
+    } else if (priceChange < 0) {
+        element.classList.remove('positive-change');
+        element.classList.add('negative-change');
+    }
+    
+    // Remove classes after animation
+    setTimeout(() => {
+        element.classList.remove('positive-change');
+        element.classList.remove('negative-change');
+    }, 1000);
 }
 
 /**
  * Flashes the update indicator
  */
 function flashUpdateIndicator() {
-    const indicator = document.getElementById('price-update-indicator');
+    const indicator = document.getElementById('update-indicator');
     
-    // Add flash class
     indicator.classList.add('flash');
     
-    // Remove flash class after animation
     setTimeout(() => {
         indicator.classList.remove('flash');
     }, 1000);
@@ -340,19 +361,16 @@ function flashUpdateIndicator() {
  * Updates the system uptime display
  */
 function updateSystemUptime() {
-    // For demo purposes, this is just a placeholder
-    // In a real application, this would come from the server
-    const startTime = new Date();
-    startTime.setHours(startTime.getHours() - Math.floor(Math.random() * 24));
+    systemUptime++;
     
-    const now = new Date();
-    const diff = now - startTime;
+    const hours = Math.floor(systemUptime / 3600);
+    const minutes = Math.floor((systemUptime % 3600) / 60);
+    const seconds = systemUptime % 60;
     
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const uptimeString = 
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     
-    document.getElementById('system-uptime').textContent = `${days}d ${hours}h ${minutes}m`;
+    document.getElementById('system-uptime').textContent = uptimeString;
 }
 
 /**
@@ -362,6 +380,8 @@ function updateSystemUptime() {
  * @returns {string} The formatted timestamp
  */
 function formatTimestamp(timestamp) {
+    if (!timestamp) return '-';
+    
     const date = new Date(timestamp);
     return date.toLocaleString();
 }

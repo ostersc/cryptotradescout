@@ -139,9 +139,19 @@ function runBacktest(event) {
     const algorithmId = document.getElementById('backtest-algorithm').value;
     const exchange = document.getElementById('backtest-exchange').value;
     const tradingPair = document.getElementById('backtest-pair').value;
-    const startTime = document.getElementById('backtest-start-time').value.replace('T', ' ') + ':00';
-    const endTime = document.getElementById('backtest-end-time').value.replace('T', ' ') + ':00';
+    // Format dates for LocalDateTime.parse() in backend (ISO-8601 format)
+    const startTime = document.getElementById('backtest-start-time').value + ':00';  // Add seconds
+    const endTime = document.getElementById('backtest-end-time').value + ':00';      // Add seconds
     const initialCapital = parseFloat(document.getElementById('backtest-initial-capital').value);
+    
+    console.log('Running backtest with:', {
+        algorithmId,
+        exchange,
+        tradingPair,
+        startTime,
+        endTime,
+        initialCapital
+    });
     
     // Collect algorithm parameters
     const algorithmParams = {};

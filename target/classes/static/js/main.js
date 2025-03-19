@@ -1,67 +1,67 @@
 /**
  * Main JavaScript file for handling the tab navigation and initialization
  */
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Tab navigation
-    const dashboardTab = document.getElementById('dashboard-tab');
-    const algorithmsTab = document.getElementById('algorithms-tab');
-    const backtestTab = document.getElementById('backtest-tab');
-    const tradingTab = document.getElementById('trading-tab');
-
-    const dashboardContent = document.getElementById('dashboard-content');
-    const algorithmsContent = document.getElementById('algorithms-content');
-    const backtestContent = document.getElementById('backtest-content');
-    const tradingContent = document.getElementById('trading-content');
-
-    // Function to hide all content sections
+    // Set up tab navigation
+    const tabs = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('.content-section');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function(event) {
+            event.preventDefault();
+            
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Hide all sections
+            hideAllSections();
+            
+            // Show the section corresponding to the clicked tab
+            const targetId = this.getAttribute('data-target');
+            document.getElementById(targetId).classList.remove('d-none');
+            
+            // Initialize the content based on the selected tab
+            initializeTabContent(targetId);
+        });
+    });
+    
+    // Hide all sections except the first one
     function hideAllSections() {
-        dashboardContent.classList.add('d-none');
-        algorithmsContent.classList.add('d-none');
-        backtestContent.classList.add('d-none');
-        tradingContent.classList.add('d-none');
-
-        // Remove active class from all tabs
-        dashboardTab.classList.remove('active');
-        algorithmsTab.classList.remove('active');
-        backtestTab.classList.remove('active');
-        tradingTab.classList.remove('active');
+        sections.forEach(section => {
+            section.classList.add('d-none');
+        });
     }
-
-    // Dashboard tab click
-    dashboardTab.addEventListener('click', function(e) {
-        e.preventDefault();
-        hideAllSections();
-        dashboardContent.classList.remove('d-none');
-        dashboardTab.classList.add('active');
-    });
-
-    // Algorithms tab click
-    algorithmsTab.addEventListener('click', function(e) {
-        e.preventDefault();
-        hideAllSections();
-        algorithmsContent.classList.remove('d-none');
-        algorithmsTab.classList.add('active');
-    });
-
-    // Backtest tab click
-    backtestTab.addEventListener('click', function(e) {
-        e.preventDefault();
-        hideAllSections();
-        backtestContent.classList.remove('d-none');
-        backtestTab.classList.add('active');
-    });
-
-    // Trading tab click
-    tradingTab.addEventListener('click', function(e) {
-        e.preventDefault();
-        hideAllSections();
-        tradingContent.classList.remove('d-none');
-        tradingTab.classList.add('active');
-    });
-
-    // Initialize the dashboard page (default active tab)
-    initializeDashboard();
-    loadAlgorithms();
-    initializeBacktestForm();
-    initializeTradingForm();
+    
+    // Initialize content based on tab
+    function initializeTabContent(targetId) {
+        switch (targetId) {
+            case 'dashboard-section':
+                if (typeof initializeDashboard === 'function') {
+                    initializeDashboard();
+                }
+                break;
+            case 'algorithms-section':
+                if (typeof loadAlgorithms === 'function') {
+                    loadAlgorithms();
+                }
+                break;
+            case 'backtest-section':
+                if (typeof initializeBacktestForm === 'function') {
+                    initializeBacktestForm();
+                }
+                break;
+            case 'trading-section':
+                if (typeof initializeTradingForm === 'function') {
+                    initializeTradingForm();
+                }
+                break;
+        }
+    }
+    
+    // Click the first tab to initialize the application
+    tabs[0].click();
 });
