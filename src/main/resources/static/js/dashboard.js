@@ -123,8 +123,18 @@ function startSystemStatusPolling() {
  * Updates the market data display
  */
 function updateMarketData() {
-    const exchange = document.getElementById('selected-exchange').value;
-    const tradingPair = document.getElementById('selected-pair').value;
+    const exchangeSelector = document.getElementById('exchange-selector');
+    const pairSelector = document.getElementById('trading-pair-selector');
+    
+    if (!exchangeSelector || !pairSelector) {
+        console.error('Exchange or trading pair selector not found in the DOM');
+        return;
+    }
+    
+    const exchange = exchangeSelector.value;
+    const tradingPair = pairSelector.value;
+    
+    console.log(`Fetching market data for ${exchange} ${tradingPair}`);
     
     fetch(`/api/trading/market-data?exchange=${exchange}&tradingPair=${tradingPair}`)
         .then(response => {
@@ -147,6 +157,11 @@ function updateMarketData() {
  * @param {Object} data - The market data object
  */
 function updateMarketDataDisplay(data) {
+    if (!data) {
+        console.error('No market data received');
+        return;
+    }
+    
     // Store in history (limit to 100 points)
     marketDataHistory.push(data);
     if (marketDataHistory.length > 100) {
@@ -159,6 +174,13 @@ function updateMarketDataDisplay(data) {
     const askPriceElement = document.getElementById('ask-price');
     const volumeElement = document.getElementById('volume');
     const timestampElement = document.getElementById('timestamp');
+    const lastUpdateElement = document.getElementById('last-update');
+    
+    // Check if all required elements exist
+    if (!lastPriceElement || !bidPriceElement || !askPriceElement || !volumeElement || !timestampElement) {
+        console.error('One or more required DOM elements for market data display not found');
+        return;
+    }
     
     // Get previous values if available
     const previousLastPrice = lastPriceElement.getAttribute('data-value') ? 
@@ -189,7 +211,9 @@ function updateMarketDataDisplay(data) {
     
     // Update last update time
     lastUpdateTime = new Date();
-    document.getElementById('last-update').textContent = lastUpdateTime.toLocaleTimeString();
+    if (lastUpdateElement) {
+        lastUpdateElement.textContent = lastUpdateTime.toLocaleTimeString();
+    }
     
     // Flash the update indicator
     flashUpdateIndicator();
@@ -201,20 +225,29 @@ function updateMarketDataDisplay(data) {
  * @param {Object} data - The market data object
  */
 function updatePriceChart(data) {
-    // Add new data point to chart
-    const timestamp = new Date(data.timestamp).toLocaleTimeString();
-    
-    priceChart.data.labels.push(timestamp);
-    priceChart.data.datasets[0].data.push(data.lastPrice);
-    
-    // Limit to 20 visible points
-    if (priceChart.data.labels.length > 20) {
-        priceChart.data.labels.shift();
-        priceChart.data.datasets[0].data.shift();
+    if (!data || !priceChart) {
+        console.error('Cannot update price chart: missing data or chart not initialized');
+        return;
     }
     
-    // Update chart
-    priceChart.update();
+    try {
+        // Add new data point to chart
+        const timestamp = new Date(data.timestamp).toLocaleTimeString();
+        
+        priceChart.data.labels.push(timestamp);
+        priceChart.data.datasets[0].data.push(data.lastPrice);
+        
+        // Limit to 20 visible points
+        if (priceChart.data.labels.length > 20) {
+            priceChart.data.labels.shift();
+            priceChart.data.datasets[0].data.shift();
+        }
+        
+        // Update chart
+        priceChart.update();
+    } catch (error) {
+        console.error('Error updating price chart:', error);
+    }
 }
 
 /**
@@ -348,13 +381,15 @@ function updatePriceChangeIndicator(element, currentValue, previousValue) {
  * Flashes the update indicator
  */
 function flashUpdateIndicator() {
-    const indicator = document.getElementById('update-indicator');
+    const indicator = document.getElementById('price-update-indicator');
     
-    indicator.classList.add('flash');
-    
-    setTimeout(() => {
-        indicator.classList.remove('flash');
-    }, 1000);
+    if (indicator) {
+        indicator.classList.add('flash');
+        
+        setTimeout(() => {
+            indicator.classList.remove('flash');
+        }, 1000);
+    }
 }
 
 /**
