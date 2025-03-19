@@ -43,58 +43,76 @@ function initializeDashboard() {
  * Initializes the price chart
  */
 function initializePriceChart() {
-    const ctx = document.getElementById('price-chart').getContext('2d');
-    
-    priceChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Price (USD)',
-                data: [],
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                fill: true,
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'BTC/USD Price'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return formatCurrency(context.raw);
+    try {
+        const chartCanvas = document.getElementById('price-chart');
+        
+        if (!chartCanvas) {
+            console.error('Price chart canvas element not found');
+            return;
+        }
+        
+        const ctx = chartCanvas.getContext('2d');
+        
+        if (!ctx) {
+            console.error('Failed to get 2D context from canvas');
+            return;
+        }
+        
+        priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Price (USD)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'BTC/USD Price'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return formatCurrency(context.raw);
+                            }
                         }
                     }
-                }
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Time'
-                    }
                 },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Price (USD)'
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
                     },
-                    ticks: {
-                        callback: function(value) {
-                            return formatCurrency(value);
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Price (USD)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrency(value);
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+        
+        console.log('Price chart initialized successfully');
+    } catch (error) {
+        console.error('Error initializing price chart:', error);
+    }
 }
 
 /**
@@ -262,50 +280,59 @@ function updateSystemStatus() {
             return response.json();
         })
         .then(statusData => {
-            // Update trading status
-            const tradingStatus = document.getElementById('trading-status');
-            const activeAlgorithm = document.getElementById('active-algorithm');
-            const tradingStartTime = document.getElementById('trading-start-time');
-            
-            if (statusData.isActive) {
-                tradingStatus.textContent = 'Active';
-                tradingStatus.className = 'badge bg-success';
-                activeAlgorithm.textContent = statusData.algorithm || 'Unknown';
-                tradingStartTime.textContent = formatTimestamp(statusData.startTime) || 'Unknown';
+            try {
+                // Update trading status
+                const tradingStatus = document.getElementById('trading-status');
+                const activeAlgorithm = document.getElementById('active-algorithm');
+                const tradingStartTime = document.getElementById('trading-start-time');
+                const stopTradingBtn = document.getElementById('stop-trading-btn');
+                const startTradingBtn = document.getElementById('start-trading-btn');
                 
-                // Enable stop button, disable start button
-                document.getElementById('stop-trading-btn').disabled = false;
-                document.getElementById('start-trading-btn').disabled = true;
-            } else {
-                tradingStatus.textContent = 'Inactive';
-                tradingStatus.className = 'badge bg-secondary';
-                activeAlgorithm.textContent = 'None';
-                tradingStartTime.textContent = '-';
+                // Check if required elements exist
+                if (!tradingStatus || !activeAlgorithm || !tradingStartTime) {
+                    console.error('One or more required trading status elements not found');
+                    return;
+                }
                 
-                // Enable start button, disable stop button
-                document.getElementById('stop-trading-btn').disabled = true;
-                document.getElementById('start-trading-btn').disabled = false;
-            }
-            
-            // Update system health
-            const systemHealth = document.getElementById('system-health');
-            const memoryUsage = document.getElementById('memory-usage');
-            const cpuUsage = document.getElementById('cpu-usage');
-            
-            if (statusData.isHealthy) {
-                systemHealth.textContent = 'Healthy';
-                systemHealth.className = 'badge bg-success';
-            } else {
-                systemHealth.textContent = 'Issues Detected';
-                systemHealth.className = 'badge bg-warning';
-            }
-            
-            if (statusData.memoryUsage) {
-                memoryUsage.textContent = `${statusData.memoryUsage.toFixed(1)}%`;
-            }
-            
-            if (statusData.cpuUsage) {
-                cpuUsage.textContent = `${statusData.cpuUsage.toFixed(1)}%`;
+                if (statusData.isActive) {
+                    tradingStatus.textContent = 'Active';
+                    tradingStatus.className = 'badge bg-success';
+                    activeAlgorithm.textContent = statusData.algorithm || 'Unknown';
+                    tradingStartTime.textContent = formatTimestamp(statusData.startTime) || 'Unknown';
+                    
+                    // Enable stop button, disable start button
+                    if (stopTradingBtn) stopTradingBtn.disabled = false;
+                    if (startTradingBtn) startTradingBtn.disabled = true;
+                } else {
+                    tradingStatus.textContent = 'Inactive';
+                    tradingStatus.className = 'badge bg-secondary';
+                    activeAlgorithm.textContent = 'None';
+                    tradingStartTime.textContent = '-';
+                    
+                    // Enable start button, disable stop button
+                    if (stopTradingBtn) stopTradingBtn.disabled = true;
+                    if (startTradingBtn) startTradingBtn.disabled = false;
+                }
+                
+                // Update system health
+                const systemHealth = document.getElementById('system-health');
+                const memoryUsage = document.getElementById('memory-usage');
+                const cpuUsage = document.getElementById('cpu-usage');
+                
+                if (systemHealth && statusData.isHealthy !== undefined) {
+                    systemHealth.textContent = statusData.isHealthy ? 'Healthy' : 'Issues Detected';
+                    systemHealth.className = statusData.isHealthy ? 'badge bg-success' : 'badge bg-warning';
+                }
+                
+                if (memoryUsage && statusData.memoryUsage) {
+                    memoryUsage.textContent = `${statusData.memoryUsage.toFixed(1)}%`;
+                }
+                
+                if (cpuUsage && statusData.cpuUsage) {
+                    cpuUsage.textContent = `${statusData.cpuUsage.toFixed(1)}%`;
+                }
+            } catch (error) {
+                console.error('Error updating system status display:', error);
             }
         })
         .catch(error => {
@@ -317,8 +344,17 @@ function updateSystemStatus() {
  * Starts the automated trading
  */
 function startTrading() {
-    // Redirect to trading tab
-    document.getElementById('trading-tab').click();
+    try {
+        // Redirect to trading tab
+        const tradingTab = document.getElementById('trading-tab');
+        if (tradingTab) {
+            tradingTab.click();
+        } else {
+            console.error('Trading tab element not found');
+        }
+    } catch (error) {
+        console.error('Error starting trading:', error);
+    }
 }
 
 /**
@@ -356,25 +392,34 @@ function stopTrading() {
  * @param {number} previousValue - The previous price value
  */
 function updatePriceChangeIndicator(element, currentValue, previousValue) {
-    if (previousValue === 0) {
+    // Check if element exists and previousValue is valid
+    if (!element || previousValue === 0) {
+        console.debug('Price change indicator update skipped: element null or no previous value');
         return;
     }
     
-    const priceChange = currentValue - previousValue;
-    
-    if (priceChange > 0) {
-        element.classList.remove('negative-change');
-        element.classList.add('positive-change');
-    } else if (priceChange < 0) {
-        element.classList.remove('positive-change');
-        element.classList.add('negative-change');
+    try {
+        const priceChange = currentValue - previousValue;
+        
+        if (priceChange > 0) {
+            element.classList.remove('negative-change');
+            element.classList.add('positive-change');
+        } else if (priceChange < 0) {
+            element.classList.remove('positive-change');
+            element.classList.add('negative-change');
+        }
+        
+        // Remove classes after animation
+        setTimeout(() => {
+            // Check if element still exists when timeout executes
+            if (element) {
+                element.classList.remove('positive-change');
+                element.classList.remove('negative-change');
+            }
+        }, 1000);
+    } catch (error) {
+        console.error('Error updating price change indicator:', error);
     }
-    
-    // Remove classes after animation
-    setTimeout(() => {
-        element.classList.remove('positive-change');
-        element.classList.remove('negative-change');
-    }, 1000);
 }
 
 /**
@@ -396,16 +441,23 @@ function flashUpdateIndicator() {
  * Updates the system uptime display
  */
 function updateSystemUptime() {
-    systemUptime++;
-    
-    const hours = Math.floor(systemUptime / 3600);
-    const minutes = Math.floor((systemUptime % 3600) / 60);
-    const seconds = systemUptime % 60;
-    
-    const uptimeString = 
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    document.getElementById('system-uptime').textContent = uptimeString;
+    try {
+        systemUptime++;
+        
+        const hours = Math.floor(systemUptime / 3600);
+        const minutes = Math.floor((systemUptime % 3600) / 60);
+        const seconds = systemUptime % 60;
+        
+        const uptimeString = 
+            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        const uptimeElement = document.getElementById('system-uptime');
+        if (uptimeElement) {
+            uptimeElement.textContent = uptimeString;
+        }
+    } catch (error) {
+        console.error('Error updating system uptime:', error);
+    }
 }
 
 /**
