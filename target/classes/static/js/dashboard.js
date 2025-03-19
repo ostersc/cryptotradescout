@@ -12,31 +12,94 @@ let systemUptime = 0;
 let uptimeInterval = null;
 
 /**
+ * Checks if API endpoints are available
+ * @returns {Promise<boolean>} True if API is available, false otherwise
+ */
+async function checkApiAvailability() {
+    try {
+        console.log('Checking API availability...');
+        
+        const response = await fetch('/api/trading/system-status');
+        
+        if (!response.ok) {
+            console.error(`API status check failed: ${response.status} ${response.statusText}`);
+            return false;
+        }
+        
+        console.log('API is available');
+        return true;
+    } catch (error) {
+        console.error('API availability check failed:', error);
+        return false;
+    }
+}
+
+/**
  * Initializes the dashboard
  */
 function initializeDashboard() {
-    // Initialize price chart
-    initializePriceChart();
-    
-    // Start polling for market data
-    startMarketDataPolling();
-    
-    // Start polling for system status
-    startSystemStatusPolling();
-    
-    // Set up refresh button
-    document.getElementById('refresh-market-data').addEventListener('click', () => {
-        updateMarketData();
-        flashUpdateIndicator();
-    });
-    
-    // Set up trading buttons
-    document.getElementById('start-trading-btn').addEventListener('click', startTrading);
-    document.getElementById('stop-trading-btn').addEventListener('click', stopTrading);
-    
-    // Initialize system uptime
-    updateSystemUptime();
-    uptimeInterval = setInterval(updateSystemUptime, 1000);
+    try {
+        console.log('Initializing dashboard...');
+        
+        // Check API availability
+        checkApiAvailability().then(isAvailable => {
+            if (!isAvailable) {
+                console.warn('API is not available. Some features may not work properly.');
+                
+                // Display a message to the user
+                const statusElement = document.getElementById('trading-status');
+                if (statusElement) {
+                    statusElement.textContent = 'API Unavailable';
+                    statusElement.className = 'badge bg-danger';
+                }
+            }
+        });
+        
+        // Initialize price chart
+        initializePriceChart();
+        
+        // Start polling for market data
+        startMarketDataPolling();
+        
+        // Start polling for system status
+        startSystemStatusPolling();
+        
+        // Set up refresh button
+        const refreshButton = document.getElementById('refresh-market-data');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => {
+                updateMarketData();
+                flashUpdateIndicator();
+            });
+            console.log('Refresh button initialized');
+        } else {
+            console.warn('Refresh market data button not found');
+        }
+        
+        // Set up trading buttons
+        const startTradingBtn = document.getElementById('start-trading-btn');
+        const stopTradingBtn = document.getElementById('stop-trading-btn');
+        
+        if (startTradingBtn) {
+            startTradingBtn.addEventListener('click', startTrading);
+        } else {
+            console.warn('Start trading button not found');
+        }
+        
+        if (stopTradingBtn) {
+            stopTradingBtn.addEventListener('click', stopTrading);
+        } else {
+            console.warn('Stop trading button not found');
+        }
+        
+        // Initialize system uptime
+        updateSystemUptime();
+        uptimeInterval = setInterval(updateSystemUptime, 1000);
+        
+        console.log('Dashboard initialization complete');
+    } catch (error) {
+        console.error('Error initializing dashboard:', error);
+    }
 }
 
 /**
@@ -361,27 +424,34 @@ function startTrading() {
  * Stops the automated trading
  */
 function stopTrading() {
-    fetch('/api/trading/system-control', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ command: 'stop' })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        alert(data.message || 'Trading stopped successfully');
-        updateSystemStatus();
-    })
-    .catch(error => {
-        console.error('Error stopping trading:', error);
-        alert('Failed to stop trading. See console for details.');
-    });
+    try {
+        console.log('Stopping trading...');
+        
+        fetch('/api/trading/system-control', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ command: 'stop' })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Trading stop command successful:', data);
+            alert(data.message || 'Trading stopped successfully');
+            updateSystemStatus();
+        })
+        .catch(error => {
+            console.error('Error stopping trading:', error);
+            alert('Failed to stop trading. See console for details.');
+        });
+    } catch (error) {
+        console.error('Critical error in stopTrading function:', error);
+    }
 }
 
 /**
@@ -401,20 +471,18 @@ function updatePriceChangeIndicator(element, currentValue, previousValue) {
     try {
         const priceChange = currentValue - previousValue;
         
+        // Apply direct styling instead of using classList
         if (priceChange > 0) {
-            element.classList.remove('negative-change');
-            element.classList.add('positive-change');
+            element.style.backgroundColor = 'rgba(40, 167, 69, 0.3)';
         } else if (priceChange < 0) {
-            element.classList.remove('positive-change');
-            element.classList.add('negative-change');
+            element.style.backgroundColor = 'rgba(220, 53, 69, 0.3)';
         }
         
-        // Remove classes after animation
+        // Remove background after animation
         setTimeout(() => {
             // Check if element still exists when timeout executes
             if (element) {
-                element.classList.remove('positive-change');
-                element.classList.remove('negative-change');
+                element.style.backgroundColor = 'transparent';
             }
         }, 1000);
     } catch (error) {
@@ -426,14 +494,24 @@ function updatePriceChangeIndicator(element, currentValue, previousValue) {
  * Flashes the update indicator
  */
 function flashUpdateIndicator() {
-    const indicator = document.getElementById('price-update-indicator');
-    
-    if (indicator) {
-        indicator.classList.add('flash');
+    try {
+        const indicator = document.getElementById('price-update-indicator');
+        
+        if (!indicator) {
+            console.warn('Price update indicator element not found');
+            return;
+        }
+        
+        // Use direct style manipulation instead of classList
+        indicator.style.opacity = '1';
         
         setTimeout(() => {
-            indicator.classList.remove('flash');
+            if (indicator) {
+                indicator.style.opacity = '0';
+            }
         }, 1000);
+    } catch (error) {
+        console.error('Error flashing update indicator:', error);
     }
 }
 
