@@ -158,7 +158,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('No tabs available to initialize the application');
         }
         
-        console.log('Main application initialization complete');
+        // Load required scripts
+const scripts = [
+    '/js/backtest.js'
+];
+
+scripts.forEach(src => {
+    const script = document.createElement('script');
+    script.src = src;
+    document.head.appendChild(script);
+});
+
+console.log('Main application initialization complete');
     } catch (error) {
         console.error('Critical error in main application initialization:', error);
     }
