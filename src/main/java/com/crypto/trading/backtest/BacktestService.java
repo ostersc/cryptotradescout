@@ -196,7 +196,9 @@ public class BacktestService {
                         
                         // Only apply tax on positive gains
                         double taxableAmount = Math.max(0, taxResult.getTotalGain());
-                        order.setTax(taxableAmount * order.getTaxRate());
+                        double calculatedTax = taxableAmount * order.getTaxRate();
+                        order.setTax(calculatedTax);
+                        order.setEstimatedTaxLiability(calculatedTax); // Also set estimatedTaxLiability to ensure frontend display
                     }
 
                     // Calculate current portfolio value

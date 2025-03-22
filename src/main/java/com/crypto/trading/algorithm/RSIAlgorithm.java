@@ -294,12 +294,22 @@ public class RSIAlgorithm implements TradingAlgorithm {
                     // Add this gain/loss to our cumulative running total
                     this.cumulativeCapitalGainLoss += netGain;
                     
-                    // Tax is only applied to the cumulative gain, not individual trades
+                    // Calculate tax both at the individual trade level and cumulative level
+                    // This ensures we have reasonable values for both individual trades and overall tax calculation
+                    
+                    // Individual trade tax - use for display purposes
+                    double individualTax = 0.0;
+                    if (netGain > 0) {
+                        // Only apply tax on positive gains for individual trades
+                        individualTax = netGain * taxRate;
+                    }
+                    
+                    // Cumulative tax - more accurate for overall tax calculation
                     // If cumulative is negative, there's no tax liability (it's a capital loss)
-                    double tax = 0.0;
+                    double cumulativeTax = 0.0;
                     if (this.cumulativeCapitalGainLoss > 0) {
                         // Only apply tax to positive cumulative gains
-                        tax = this.cumulativeCapitalGainLoss * taxRate;
+                        cumulativeTax = this.cumulativeCapitalGainLoss * taxRate;
                     }
                     
                     Order sellOrder = new Order(
@@ -311,13 +321,15 @@ public class RSIAlgorithm implements TradingAlgorithm {
                             taxRate
                     );
                     sellOrder.setTaxableGain(netGain); // Set the gain/loss amount for this trade
-                    sellOrder.setEstimatedTaxLiability(tax); // Set the tax based on cumulative gain/loss
+                    // Set both tax fields - one for individual trade display, one for cumulative
+                    sellOrder.setTax(individualTax);
+                    sellOrder.setEstimatedTaxLiability(individualTax); // Use individual tax for per-trade display
                     sellOrder.setCreatedAt(data.getTimestamp());
                     sellOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
                     sellOrder.setExchange(data.getExchange());
                     
-                    // Update portfolio
-                    availableCapital += (revenue - sellFee - tax);
+                    // Update portfolio - for portfolio purposes use the cumulative tax (more accurate)
+                    availableCapital += (revenue - sellFee - cumulativeTax);
                     cryptoHoldings = 0;
                     inPosition = false;
                     
