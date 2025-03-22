@@ -156,7 +156,7 @@ function loadAlgorithmParameters() {
         return;
     }
     
-    // Clear existing parameters
+    // Always clear existing parameters first
     paramsContainer.innerHTML = '';
     
     if (!algorithmId) {
@@ -174,11 +174,15 @@ function loadAlgorithmParameters() {
             return response.json();
         })
         .then(algorithm => {
+            // Make sure container is empty before populating
+            paramsContainer.innerHTML = '';
             populateAlgorithmParameters(algorithm, paramsContainer);
         })
         .catch(error => {
             console.error('Error fetching algorithm parameters, using defaults:', error);
             
+            // Make sure container is empty before populating
+            paramsContainer.innerHTML = '';
             // Use default parameters based on algorithm ID
             const defaultParams = getDefaultParameters(algorithmId);
             populateAlgorithmParameters({
