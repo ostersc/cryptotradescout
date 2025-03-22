@@ -351,6 +351,33 @@ function displayBacktestResults(results) {
         if (resultsEl) resultsEl.classList.remove('d-none');
         if (noResultsEl) noResultsEl.classList.add('d-none');
         
+        // Check if the data is simulated and show a warning
+        if (results.isSimulatedData === true) {
+            // Create or update simulation warning
+            let simulationWarningEl = document.getElementById('simulation-warning');
+            if (!simulationWarningEl) {
+                simulationWarningEl = document.createElement('div');
+                simulationWarningEl.id = 'simulation-warning';
+                simulationWarningEl.className = 'alert alert-warning mb-4';
+                simulationWarningEl.innerHTML = '<strong>Note:</strong> These results are based on simulated data since historical market data was not available for the selected period.';
+                
+                // Insert at the top of the results container
+                if (resultsEl && resultsEl.firstChild) {
+                    resultsEl.insertBefore(simulationWarningEl, resultsEl.firstChild);
+                } else if (resultsEl) {
+                    resultsEl.appendChild(simulationWarningEl);
+                }
+            } else {
+                simulationWarningEl.classList.remove('d-none');
+            }
+        } else {
+            // Hide simulation warning if it exists
+            const simulationWarningEl = document.getElementById('simulation-warning');
+            if (simulationWarningEl) {
+                simulationWarningEl.classList.add('d-none');
+            }
+        }
+        
         // Update summary information
         const initialCapital = results.initialCapital || 10000;
         let finalCapital = initialCapital;

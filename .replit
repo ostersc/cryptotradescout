@@ -27,7 +27,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && ./mvnw spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dlogging.level.root=DEBUG\""
+args = "export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && ./mvnw spring-boot:run"
 waitForPort = 5000
 
 [deployment]
