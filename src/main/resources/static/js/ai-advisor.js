@@ -372,6 +372,7 @@ function useRecommendedParameters(algorithmId) {
             setTimeout(() => {
                 const algorithmSelect = document.getElementById('trading-algorithm');
                 if (algorithmSelect) {
+                    console.log(`Setting trading algorithm selection to ${algorithmId}`);
                     // Set the algorithm selection
                     algorithmSelect.value = algorithmId;
                     
@@ -387,24 +388,84 @@ function useRecommendedParameters(algorithmId) {
                         // Find all parameter input fields
                         const paramInputs = document.querySelectorAll('#trading-algorithm-params-container input');
                         
-                        paramInputs.forEach(input => {
-                            const paramName = input.id.replace('trading-param-', '');
+                        if (paramInputs.length === 0) {
+                            console.error('No parameter input fields found in the trading form. Parameters may not have loaded yet.');
                             
-                            // Check if we have a recommended value for this parameter
-                            if (params.hasOwnProperty(paramName)) {
-                                input.value = params[paramName];
-                                console.log(`Set parameter ${paramName} to ${params[paramName]}`);
-                            }
-                        });
+                            // Try one more time with a longer delay
+                            setTimeout(() => {
+                                const retryParamInputs = document.querySelectorAll('#trading-algorithm-params-container input');
+                                if (retryParamInputs.length === 0) {
+                                    console.error('Still no parameter input fields found after retry.');
+                                    alert('Could not set parameters. Please manually set your parameters.');
+                                    return;
+                                }
+                                
+                                applyParametersToInputs(retryParamInputs, params, algorithmId);
+                            }, 2000);
+                            return;
+                        }
                         
-                        // Show a confirmation alert
-                        alert(`Parameters for ${algorithmId} have been set. You can now start live trading with these optimized parameters.`);
+                        applyParametersToInputs(paramInputs, params, algorithmId);
                     }, 1000); // Wait for the parameters to be loaded
                 }
             }, 500);
         }
     } catch (error) {
         console.error('Error using recommended parameters:', error);
+    }
+}
+
+/**
+ * Applies algorithm parameters to input fields
+ * 
+ * @param {NodeList} inputElements - The input elements
+ * @param {Object} params - The parameter values
+ * @param {string} algorithmId - The algorithm ID
+ */
+function applyParametersToInputs(inputElements, params, algorithmId) {
+    let parameterCount = 0;
+    
+    // Map algorithm parameter names to their equivalent trading form parameter names
+    // This is needed because parameter names might vary slightly between components
+    const parameterMap = {
+        // Simple Moving Average
+        'shortPeriod': 'shortPeriod',
+        'longPeriod': 'longPeriod',
+        // RSI
+        'period': 'period',
+        'overboughtThreshold': 'overboughtThreshold',
+        'oversoldThreshold': 'oversoldThreshold',
+        // Bollinger Bands
+        'standardDeviation': 'standardDeviation',
+        // Common parameters
+        'positionSize': 'positionSize',
+        'feeRate': 'feeRate',
+        'taxRate': 'taxRate'
+    };
+    
+    inputElements.forEach(input => {
+        const rawParamName = input.id.replace('trading-param-', '');
+        
+        // Try both direct lookup and mapped lookup for the parameter
+        if (params.hasOwnProperty(rawParamName)) {
+            input.value = params[rawParamName];
+            console.log(`Set parameter ${rawParamName} to ${params[rawParamName]}`);
+            parameterCount++;
+        } else if (parameterMap[rawParamName] && params.hasOwnProperty(parameterMap[rawParamName])) {
+            // Try using the mapped parameter name
+            const mappedName = parameterMap[rawParamName];
+            input.value = params[mappedName];
+            console.log(`Set mapped parameter ${rawParamName} to ${params[mappedName]}`);
+            parameterCount++;
+        }
+    });
+    
+    if (parameterCount > 0) {
+        // Show a confirmation alert
+        alert(`Parameters for ${algorithmId} have been set. You can now start live trading with these optimized parameters.`);
+    } else {
+        console.error('No parameters were set. Parameter names may not match.');
+        alert('Could not set parameters. Please manually set your parameters.');
     }
 }
 
@@ -432,6 +493,7 @@ function backtestWithParameters(algorithmId) {
             setTimeout(() => {
                 const algorithmSelect = document.getElementById('backtest-algorithm');
                 if (algorithmSelect) {
+                    console.log(`Setting backtest algorithm selection to ${algorithmId}`);
                     // Set the algorithm selection
                     algorithmSelect.value = algorithmId;
                     
@@ -447,28 +509,89 @@ function backtestWithParameters(algorithmId) {
                         // Find all parameter input fields
                         const paramInputs = document.querySelectorAll('#algorithm-params-container input');
                         
-                        paramInputs.forEach(input => {
-                            const paramName = input.id.replace('param-', '');
+                        if (paramInputs.length === 0) {
+                            console.error('No parameter input fields found in the backtest form. Parameters may not have loaded yet.');
                             
-                            // Check if we have a recommended value for this parameter
-                            if (params.hasOwnProperty(paramName)) {
-                                input.value = params[paramName];
-                                console.log(`Set backtest parameter ${paramName} to ${params[paramName]}`);
-                            }
-                        });
-                        
-                        // Set the default dates
-                        if (typeof setDefaultDates === 'function') {
-                            setDefaultDates();
+                            // Try one more time with a longer delay
+                            setTimeout(() => {
+                                const retryParamInputs = document.querySelectorAll('#algorithm-params-container input');
+                                if (retryParamInputs.length === 0) {
+                                    console.error('Still no parameter input fields found after retry.');
+                                    alert('Could not set backtest parameters. Please manually set your parameters.');
+                                    return;
+                                }
+                                
+                                // Apply parameters for backtest
+                                applyBacktestParameters(retryParamInputs, params, algorithmId);
+                            }, 2000);
+                            return;
                         }
                         
-                        // Show a confirmation alert
-                        alert(`Parameters for ${algorithmId} have been set. You can now run a backtest with these optimized parameters.`);
+                        // Apply parameters for backtest
+                        applyBacktestParameters(paramInputs, params, algorithmId);
                     }, 1000); // Wait for the parameters to be loaded
                 }
             }, 500);
         }
     } catch (error) {
         console.error('Error setting up backtest:', error);
+    }
+}
+
+/**
+ * Applies algorithm parameters to backtest input fields
+ * 
+ * @param {NodeList} inputElements - The input elements
+ * @param {Object} params - The parameter values
+ * @param {string} algorithmId - The algorithm ID
+ */
+function applyBacktestParameters(inputElements, params, algorithmId) {
+    let parameterCount = 0;
+    
+    // Map algorithm parameter names to their equivalent backtest form parameter names
+    const parameterMap = {
+        // Simple Moving Average
+        'shortPeriod': 'shortPeriod',
+        'longPeriod': 'longPeriod',
+        // RSI
+        'period': 'period',
+        'overboughtThreshold': 'overboughtThreshold',
+        'oversoldThreshold': 'oversoldThreshold',
+        // Bollinger Bands
+        'standardDeviation': 'standardDeviation',
+        // Common parameters
+        'positionSize': 'positionSize',
+        'feeRate': 'feeRate',
+        'taxRate': 'taxRate'
+    };
+    
+    inputElements.forEach(input => {
+        const rawParamName = input.id.replace('param-', '');
+        
+        // Try both direct lookup and mapped lookup for the parameter
+        if (params.hasOwnProperty(rawParamName)) {
+            input.value = params[rawParamName];
+            console.log(`Set backtest parameter ${rawParamName} to ${params[rawParamName]}`);
+            parameterCount++;
+        } else if (parameterMap[rawParamName] && params.hasOwnProperty(parameterMap[rawParamName])) {
+            // Try using the mapped parameter name
+            const mappedName = parameterMap[rawParamName];
+            input.value = params[mappedName];
+            console.log(`Set mapped backtest parameter ${rawParamName} to ${params[mappedName]}`);
+            parameterCount++;
+        }
+    });
+    
+    // Set the default dates
+    if (typeof setDefaultDates === 'function') {
+        setDefaultDates();
+    }
+    
+    if (parameterCount > 0) {
+        // Show a confirmation alert
+        alert(`Parameters for ${algorithmId} have been set. You can now run a backtest with these optimized parameters.`);
+    } else {
+        console.error('No backtest parameters were set. Parameter names may not match.');
+        alert('Could not set all backtest parameters. Please check and manually adjust as needed.');
     }
 }
