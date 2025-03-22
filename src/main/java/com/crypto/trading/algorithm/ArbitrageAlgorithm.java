@@ -365,22 +365,35 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     // Add this trade's net profit/loss to our cumulative tracking
                     this.cumulativeCapitalGainLoss += netProfit;
                     
-                    // Only tax positive cumulative profits
-                    double tax = 0.0;
-                    if (this.cumulativeCapitalGainLoss > 0) {
-                        tax = this.cumulativeCapitalGainLoss * taxRate;
+                    // Calculate tax both at the individual trade level and cumulative level
+                    // This ensures we have reasonable values for both individual trades and overall tax calculation
+                    
+                    // Individual trade tax - use for display purposes
+                    double individualTax = 0.0;
+                    if (netProfit > 0) {
+                        // Only apply tax on positive gains for individual trades
+                        individualTax = netProfit * taxRate;
                     }
                     
-                    // Set fee and tax information in the sell order
+                    // Cumulative tax - more accurate for overall tax calculation
+                    // If cumulative is negative, there's no tax liability (it's a capital loss)
+                    double cumulativeTax = 0.0;
+                    if (this.cumulativeCapitalGainLoss > 0) {
+                        // Only apply tax to positive cumulative gains
+                        cumulativeTax = this.cumulativeCapitalGainLoss * taxRate;
+                    }
+                    
+                    // Set both tax fields - one for individual trade display, one for cumulative
                     sellOrder.setFeeAmount(sellFee);
                     sellOrder.setFeeRate(feeRate);
                     sellOrder.setFeeAsset(tradingPair.split("-")[1]); // Fee in USD for BTC-USD
                     sellOrder.setTaxableGain(netProfit); // Set the taxable gain/loss for this trade
                     sellOrder.setTaxRate(taxRate);
-                    sellOrder.setEstimatedTaxLiability(tax);
+                    sellOrder.setTax(individualTax);
+                    sellOrder.setEstimatedTaxLiability(individualTax); // Use individual tax for per-trade display
                     
-                    // Update holdings
-                    currentCapital = sellAmount - sellFee - tax;
+                    // Update holdings - for portfolio purposes use the cumulative tax (more accurate)
+                    currentCapital = sellAmount - sellFee - cumulativeTax;
                     cryptoHoldings = 0;
                     
                     logger.debug("Backtest Arbitrage: Buy {} on {} at {}, Sell on {} at {}, Profit: {}%",
