@@ -141,7 +141,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                 logger.info("BUY signal generated at price: {}", marketData.getLastPrice());
                 order = new Order(
                         marketData.getTradingPair(),
-                        OrderType.MARKET,
+                        OrderType.BUY, // Explicitly use BUY instead of MARKET
                         tradeAmount,
                         marketData.getLastPrice()
                 );
@@ -261,7 +261,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         
                         Order order = new Order(
                                 data.getTradingPair(),
-                                OrderType.MARKET,
+                                OrderType.BUY, // Explicitly use BUY instead of MARKET
                                 amountToBuy,
                                 data.getLastPrice()
                         );
@@ -303,7 +303,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         
                         Order order = new Order(
                                 data.getTradingPair(),
-                                OrderType.MARKET,
+                                OrderType.SELL, // Explicitly use SELL instead of MARKET
                                 cryptoHoldings,
                                 data.getLastPrice()
                         );
