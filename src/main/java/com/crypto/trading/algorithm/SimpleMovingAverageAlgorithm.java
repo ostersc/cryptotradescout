@@ -333,6 +333,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                             // Only apply tax to positive cumulative gains
                             estimatedTaxLiability = this.cumulativeCapitalGainLoss * taxRate;
                         }
+                        order.setTaxableGain(profit); // Record the individual trade profit/loss
                         order.setTaxRate(taxRate);
                         order.setEstimatedTaxLiability(estimatedTaxLiability);
                         
