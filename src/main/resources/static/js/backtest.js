@@ -415,9 +415,15 @@ function populateAlgorithmParameters(algorithm, container) {
                 input.step = '0.1';
             } else if (param.toLowerCase().includes('amount') ||
                      param.toLowerCase().includes('size') ||
-                     param.toLowerCase().includes('fee') ||
                      param.toLowerCase().includes('tax') ||
                      param.toLowerCase().includes('percentage')) {
+                input.type = 'number';
+                input.step = '0.01';
+            } else if (param.toLowerCase() === 'feerate') {
+                input.type = 'number';
+                input.step = 'any';
+                input.min = '0';
+            } else if (param.toLowerCase().includes('fee')) {
                 input.type = 'number';
                 input.step = '0.01';
             }
