@@ -127,6 +127,9 @@ public class KrakenExchangeService implements ExchangeService {
         long startUnix = startTime.atZone(ZoneId.systemDefault()).toEpochSecond();
         long endUnix = endTime.atZone(ZoneId.systemDefault()).toEpochSecond();
         
+        String uri = "/0/public/OHLC?pair=" + krakenPair + "&interval=60&since=" + startUnix;
+        logger.info("Making Kraken API request for historical data: {}", uri);
+        
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/0/public/OHLC")
@@ -137,6 +140,8 @@ public class KrakenExchangeService implements ExchangeService {
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .bodyToMono(JsonNode.class)
+                .doOnNext(response -> logger.info("Received Kraken historical response with: {} nodes", 
+                                                 response != null ? response.size() : 0))
                 .map(response -> parseHistoricalMarketData(response, tradingPair, startUnix, endUnix))
                 .doOnError(e -> logger.error("Error fetching historical market data from Kraken: {}", e.getMessage()));
     }

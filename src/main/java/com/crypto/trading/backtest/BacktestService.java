@@ -77,8 +77,10 @@ public class BacktestService {
 
         // Fetch historical market data
         return exchangeService.getHistoricalMarketData(tradingPair, startTime, endTime)
+                .doOnNext(data -> logger.info("Received historical data from exchange with {} data points", 
+                                            data != null ? data.size() : 0))
                 .flatMap(historicalData -> {
-                    if (historicalData.isEmpty()) {
+                    if (historicalData == null || historicalData.isEmpty()) {
                         logger.error("No historical data available for the specified period. Cannot proceed with backtest.");
                         return Mono.error(new RuntimeException("No historical data available for " + 
                                           tradingPair + " on " + exchange + " between " + 
