@@ -432,7 +432,7 @@ public class BacktestService {
                 0.75 // Sample Sharpe ratio
         );
         
-        // Create and return the result
+        // Create and return the result with simulated data flag set to true
         return new BacktestResult(
                 algorithmId,
                 exchange,
@@ -442,7 +442,8 @@ public class BacktestService {
                 initialCapital,
                 generatedOrders,
                 150, // Sample execution time in ms
-                metrics
+                metrics,
+                true // Flag to indicate this is simulated data
         );
     }
 }
