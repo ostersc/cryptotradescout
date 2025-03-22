@@ -1136,57 +1136,43 @@ function displayTradeStatistics(orders, results) {
  */
 function displayTrades(orders, results) {
     try {
-        const tradesTable = document.getElementById('backtest-trades');
+        const tradesTable = document.getElementById('backtest-trades-table');
         
         if (!tradesTable) {
             console.error('Backtest trades table not found');
             return;
         }
         
-        // Clear the table but don't remove the header which is defined in the HTML
-        // Only keep the first row (header) if it exists
-        if (tradesTable.rows.length > 0) {
-            // Ensure the header has the correct columns
-            const headerRow = tradesTable.rows[0];
-            headerRow.innerHTML = `
-                <th>Date & Time</th>
-                <th>Type</th>
-                <th>Price</th>
-                <th>Amount</th>
-                <th>Trade Value</th>
-                <th>Fee</th>
-                <th>Tax</th>
-                <th>Cash</th>
-                <th>Crypto Value</th>
-                <th>Total Value</th>
-                <th>Return</th>
-            `;
-            
-            // Remove all rows except the header
-            while (tradesTable.rows.length > 1) {
-                tradesTable.deleteRow(1);
-            }
-        } else {
-            // If no header exists, create one
-            const headerRow = tradesTable.insertRow();
-            headerRow.innerHTML = `
-                <th>Date & Time</th>
-                <th>Type</th>
-                <th>Price</th>
-                <th>Amount</th>
-                <th>Trade Value</th>
-                <th>Fee</th>
-                <th>Tax</th>
-                <th>Cash</th>
-                <th>Crypto Value</th>
-                <th>Total Value</th>
-                <th>Return</th>
-            `;
-        }
+        // Clear the entire table
+        tradesTable.innerHTML = '';
+        
+        // Create a completely new table structure with header
+        const tableHead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `
+            <th>Date & Time</th>
+            <th>Type</th>
+            <th>Price</th>
+            <th>Amount</th>
+            <th>Trade Value</th>
+            <th>Fee</th>
+            <th>Tax</th>
+            <th>Cash</th>
+            <th>Crypto Value</th>
+            <th>Total Value</th>
+            <th>Return</th>
+        `;
+        tableHead.appendChild(headerRow);
+        tradesTable.appendChild(tableHead);
+        
+        // Create the table body
+        const tableBody = document.createElement('tbody');
+        tradesTable.appendChild(tableBody);
         
         if (!orders || orders.length === 0) {
-            const row = tradesTable.insertRow();
+            const row = document.createElement('tr');
             row.innerHTML = '<td colspan="11" class="text-center">No trades executed</td>';
+            tableBody.appendChild(row);
             return;
         }
         
@@ -1285,7 +1271,7 @@ function displayTrades(orders, results) {
                 <td class="${returnPercent >= 0 ? 'text-success' : 'text-danger'}">${returnPercent >= 0 ? '+' : ''}${returnPercent.toFixed(2)}%</td>
             `;
             
-            tradesTable.appendChild(row);
+            tableBody.appendChild(row);
         });
     } catch (error) {
         console.error('Error displaying trades:', error);
