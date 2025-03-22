@@ -635,10 +635,35 @@ function displayBacktestResults(results) {
         // Update summary information
         const initialCapital = results.initialCapital || 10000;
         let finalCapital = initialCapital;
+        let cryptoHoldings = 0;
+        let lastPrice = 0;
         
+        // Track crypto holdings throughout the orders
         if (results.generatedOrders && results.generatedOrders.length > 0) {
+            // Find the last order to get the final cash value
             const lastOrder = results.generatedOrders[results.generatedOrders.length - 1];
             finalCapital = lastOrder.totalValue || finalCapital;
+            lastPrice = lastOrder.price; // Save the last known price
+            
+            // Count current crypto holdings
+            for (const order of results.generatedOrders) {
+                if (order.type === 'BUY') {
+                    cryptoHoldings += order.amount;
+                } else if (order.type === 'SELL') {
+                    cryptoHoldings -= order.amount;
+                }
+            }
+            
+            // If there are remaining crypto holdings, add their value to final capital
+            if (cryptoHoldings > 0 && lastPrice > 0) {
+                console.log(`Adding crypto holdings to final capital: ${cryptoHoldings} units at ${lastPrice} = ${cryptoHoldings * lastPrice}`);
+                // Only add crypto value if we still have holdings (don't double count)
+                // We need to check if the last order was a SELL which would have already counted the value
+                const lastOrderWasSell = lastOrder.type === 'SELL';
+                if (!lastOrderWasSell) {
+                    finalCapital += cryptoHoldings * lastPrice;
+                }
+            }
         }
         
         const profit = finalCapital - initialCapital;
@@ -701,6 +726,8 @@ function drawEquityChart(results) {
         const orders = results.generatedOrders || [];
         const equityData = [];
         let runningCapital = results.initialCapital || 10000;
+        let cryptoHoldings = 0;
+        let lastPrice = 0;
         
         // Add initial point
         equityData.push({
@@ -710,13 +737,32 @@ function drawEquityChart(results) {
         
         // Add a point for each order
         orders.forEach(order => {
+            if (order.type === 'BUY') {
+                cryptoHoldings += order.amount;
+            } else if (order.type === 'SELL') {
+                cryptoHoldings -= order.amount;
+            }
+            
+            lastPrice = order.price;
+            
+            // Use totalValue if provided, otherwise calculate it
             if (order.totalValue) {
                 runningCapital = order.totalValue;
-                equityData.push({
-                    date: new Date(order.createdAt || new Date().toISOString()),
-                    equity: runningCapital
-                });
             }
+            
+            // For any crypto holdings, add their value to the equity
+            let totalEquity = runningCapital;
+            if (cryptoHoldings > 0 && lastPrice > 0) {
+                // Only add crypto value for buys, as sells already include it in totalValue
+                if (order.type === 'BUY') {
+                    totalEquity += cryptoHoldings * lastPrice;
+                }
+            }
+            
+            equityData.push({
+                date: new Date(order.createdAt || new Date().toISOString()),
+                equity: totalEquity
+            });
         });
         
         // Sort by date
