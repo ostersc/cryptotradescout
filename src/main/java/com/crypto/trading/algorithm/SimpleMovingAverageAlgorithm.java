@@ -326,27 +326,40 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         // Add this gain/loss to our cumulative running total
                         this.cumulativeCapitalGainLoss += profit;
                         
-                        // Tax is only applied to the cumulative gain, not individual trades
+                        // Calculate tax both at the individual trade level and cumulative level
+                        // This ensures we have reasonable values for both individual trades and overall tax calculation
+                        
+                        // Individual trade tax - use for display purposes
+                        double individualTax = 0.0;
+                        if (profit > 0) {
+                            // Only apply tax on positive gains for individual trades
+                            individualTax = profit * taxRate;
+                        }
+                        
+                        // Cumulative tax - more accurate for overall tax calculation
                         // If cumulative is negative, there's no tax liability (it's a capital loss)
-                        double estimatedTaxLiability = 0.0;
+                        double cumulativeTax = 0.0;
                         if (this.cumulativeCapitalGainLoss > 0) {
                             // Only apply tax to positive cumulative gains
-                            estimatedTaxLiability = this.cumulativeCapitalGainLoss * taxRate;
+                            cumulativeTax = this.cumulativeCapitalGainLoss * taxRate;
                         }
+                        // Set both tax fields - one for individual trade display, one for cumulative
                         order.setTaxableGain(profit); // Record the individual trade profit/loss
                         order.setTaxRate(taxRate);
-                        order.setEstimatedTaxLiability(estimatedTaxLiability);
+                        order.setTax(individualTax);
+                        order.setEstimatedTaxLiability(individualTax); // Use individual tax for per-trade display
                         
                         // Add the order to our list
                         generatedOrders.add(order);
                         
                         // Update holdings - we include the tax liability in our model to be realistic
-                        currentCapital += netProceeds - estimatedTaxLiability;
+                        // For portfolio purposes, use the cumulative tax (more accurate)
+                        currentCapital += netProceeds - cumulativeTax;
                         cryptoHoldings = 0;
                         
                         logger.debug("Backtest SELL: {} {} at price {} - Fee: {}, Tax: {}, Net: {}, Capital: {}", 
                                 order.getAmount(), data.getTradingPair().split("-")[0], 
-                                data.getLastPrice(), fee, estimatedTaxLiability, netProceeds - estimatedTaxLiability, 
+                                data.getLastPrice(), fee, individualTax, netProceeds - individualTax, 
                                 currentCapital);
                     }
                 }
