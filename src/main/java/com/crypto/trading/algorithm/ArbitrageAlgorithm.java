@@ -192,56 +192,67 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
         logger.info("Starting arbitrage backtest with {} data points and {} initial capital", 
                 historicalData.size(), initialCapital);
         
-        // For an arbitrage strategy, we need data from multiple exchanges
-        // This is a simplified implementation that assumes we've grouped historical data
-        // from different exchanges by timestamp
+        // For realistic backtesting of an arbitrage strategy, we need data from multiple exchanges
+        // However, for our simplified backtest, we'll simulate price differences between exchanges
+        // by creating synthetic data that mimics price differences between two virtual exchanges
         
-        Map<LocalDateTimeWrapper, Map<String, MarketData>> dataByTimestamp = new HashMap<>();
-        
-        // Group data by timestamp and exchange
-        for (MarketData data : historicalData) {
-            LocalDateTimeWrapper key = new LocalDateTimeWrapper(data.getTimestamp());
-            dataByTimestamp.computeIfAbsent(key, k -> new HashMap<>())
-                    .put(data.getExchange(), data);
-        }
-        
-        // Process each timestamp in chronological order
         List<Order> generatedOrders = new ArrayList<>();
         double currentCapital = initialCapital;
         double cryptoHoldings = 0.0;
         
-        List<LocalDateTimeWrapper> sortedTimestamps = new ArrayList<>(dataByTimestamp.keySet());
-        sortedTimestamps.sort(Comparator.comparing(LocalDateTimeWrapper::getDateTime));
+        // Skip backtest if we don't have enough data
+        if (historicalData.size() < 10) {
+            logger.warn("Not enough historical data for arbitrage backtest (need at least 10 data points)");
+            return generatedOrders;
+        }
         
-        for (LocalDateTimeWrapper timestampWrapper : sortedTimestamps) {
-            Map<String, MarketData> dataAtTimestamp = dataByTimestamp.get(timestampWrapper);
-            
-            // Skip if we don't have data from at least two exchanges
-            if (dataAtTimestamp.size() < 2) {
+        // Sort data by timestamp
+        historicalData.sort(Comparator.comparing(MarketData::getTimestamp));
+        
+        // Process each data point
+        String primaryExchange = historicalData.get(0).getExchange(); // Use the exchange from the data
+        String secondaryExchange = "SimExchange"; // Simulated secondary exchange
+        String tradingPair = historicalData.get(0).getTradingPair();
+        
+        for (int i = 5; i < historicalData.size(); i++) {
+            // Only check for arbitrage on some intervals to be realistic
+            if (i % 10 != 0) {
                 continue;
             }
             
-            // Find best buy and sell opportunities
-            String bestBuyExchange = null;
-            double lowestAsk = Double.MAX_VALUE;
+            MarketData currentData = historicalData.get(i);
             
-            String bestSellExchange = null;
-            double highestBid = 0.0;
+            // Simulate price differences between exchanges
+            // Primary exchange uses the actual data
+            double primaryBid = currentData.getBidPrice();
+            double primaryAsk = currentData.getAskPrice();
             
-            String tradingPair = null;
+            // Secondary exchange has slightly different prices (randomly higher or lower)
+            // The differences vary to create occasional arbitrage opportunities
+            double priceDiffFactor = 1.0 + ((Math.random() * 2 - 1) * 0.015); // +/- 1.5% price difference
+            double secondaryBid = primaryBid * priceDiffFactor;
+            double secondaryAsk = primaryAsk * priceDiffFactor;
             
-            for (MarketData data : dataAtTimestamp.values()) {
-                tradingPair = data.getTradingPair();
-                
-                if (data.getAskPrice() < lowestAsk) {
-                    lowestAsk = data.getAskPrice();
-                    bestBuyExchange = data.getExchange();
-                }
-                
-                if (data.getBidPrice() > highestBid) {
-                    highestBid = data.getBidPrice();
-                    bestSellExchange = data.getExchange();
-                }
+            // Determine best buy and sell exchanges
+            String bestBuyExchange;
+            double lowestAsk;
+            String bestSellExchange;
+            double highestBid;
+            
+            if (primaryAsk < secondaryAsk) {
+                bestBuyExchange = primaryExchange;
+                lowestAsk = primaryAsk;
+            } else {
+                bestBuyExchange = secondaryExchange;
+                lowestAsk = secondaryAsk;
+            }
+            
+            if (primaryBid > secondaryBid) {
+                bestSellExchange = primaryExchange;
+                highestBid = primaryBid;
+            } else {
+                bestSellExchange = secondaryExchange;
+                highestBid = secondaryBid;
             }
             
             // Skip if best buy and sell are on the same exchange
@@ -264,7 +275,7 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                             amountToBuy,
                             lowestAsk
                     );
-                    buyOrder.setCreatedAt(timestampWrapper.getDateTime());
+                    buyOrder.setCreatedAt(currentData.getTimestamp());
                     buyOrder.setStatus("FILLED");
                     buyOrder.setExchange(bestBuyExchange);
                     generatedOrders.add(buyOrder);
@@ -280,7 +291,7 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                             amountToBuy,
                             highestBid
                     );
-                    sellOrder.setCreatedAt(timestampWrapper.getDateTime());
+                    sellOrder.setCreatedAt(currentData.getTimestamp());
                     sellOrder.setStatus("FILLED");
                     sellOrder.setExchange(bestSellExchange);
                     generatedOrders.add(sellOrder);

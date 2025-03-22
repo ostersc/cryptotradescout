@@ -259,6 +259,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
         params.put("shortPeriod", "Short-term moving average period (number of data points)");
         params.put("longPeriod", "Long-term moving average period (number of data points)");
         params.put("tradeAmount", "Amount of cryptocurrency to trade on each signal");
+        params.put("maxSlippage", "Maximum allowed slippage in percentage");
         return params;
     }
     
@@ -307,6 +308,20 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
             double tradeAmount = ((Number) parameters.get("tradeAmount")).doubleValue();
             if (tradeAmount <= 0) {
                 logger.error("tradeAmount must be positive");
+                return false;
+            }
+        }
+        
+        // maxSlippage is optional, but if present, validate it
+        if (parameters.containsKey("maxSlippage")) {
+            if (!(parameters.get("maxSlippage") instanceof Number)) {
+                logger.error("maxSlippage must be a number");
+                return false;
+            }
+            
+            double maxSlippage = ((Number) parameters.get("maxSlippage")).doubleValue();
+            if (maxSlippage < 0) {
+                logger.error("maxSlippage must be non-negative");
                 return false;
             }
         }
