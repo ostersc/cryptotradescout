@@ -423,16 +423,16 @@ function updateMarketDataDisplay(data) {
     // Update chart
     updatePriceChart(data);
     
-    // Update last update time
+    // Update last update time - create Date object in local time zone
     lastUpdateTime = new Date();
     if (lastUpdateElement) {
-        const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        // Format in local time zone (already in local time)
         lastUpdateElement.textContent = lastUpdateTime.toLocaleTimeString(undefined, {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            hour12: false,
-            timeZone: browserTimeZone
+            hour12: false
+            // No need to specify timeZone as the Date is already in local time
         });
     }
     
@@ -452,14 +452,18 @@ function updatePriceChart(data) {
     }
     
     try {
-        // Add new data point to chart with browser timezone formatting
+        // Create a new Date object from the UTC timestamp
+        // The timestamp from the server is in ISO format (UTC), but the Date constructor 
+        // will automatically convert it to the local browser time
         const timestampDate = new Date(data.timestamp);
+        
+        // Format the date in the local timezone
+        // No need to explicitly set timeZone here as timestampDate is already converted to local time
         const timestamp = timestampDate.toLocaleTimeString(undefined, {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            hour12: false, // 24-hour time format
-            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Explicitly use browser timezone
+            hour12: false // 24-hour time format
         });
         
         priceChart.data.labels.push(timestamp);
@@ -471,34 +475,29 @@ function updatePriceChart(data) {
             priceChart.data.datasets[0].data.shift();
         }
         
-        // Dynamically calculate min/max for better y-axis scaling
-        // Always enforce a reasonable y-axis range with each update
+        // Global fixed range for y-axis to maintain consistent scaling regardless of data
         if (priceChart.data.datasets[0].data.length > 0) {
             const prices = priceChart.data.datasets[0].data;
+            const currentPrice = prices[prices.length - 1]; // Latest price
             
-            // Determine min and max values in the data
-            const min = Math.min(...prices);
-            const max = Math.max(...prices);
+            // Use a fixed percentage range around the current price (±1.5%)
+            // This ensures we keep a consistent scale even as prices change slightly
+            const fixedRangePercent = 0.015; // 1.5% range on each side
             
-            // Create a substantial buffer (about 1% of the price)
-            const buffer = max * 0.01;
+            // Ensure a minimum absolute range of $500 for Bitcoin
+            const minAbsoluteRange = 500;
             
-            // Enforce a minimum range of at least 1% of the price or $500, whichever is greater
-            const minRange = Math.max(max * 0.01, 500);
+            // Calculate percentage-based range
+            const percentRange = currentPrice * fixedRangePercent;
             
-            // Calculate initial min/max with buffer
-            let newMin = min - buffer;
-            let newMax = max + buffer;
+            // Use the larger of percentage-based range or absolute minimum range
+            const effectiveRange = Math.max(percentRange, minAbsoluteRange / 2);
             
-            // Ensure the range is at least minRange
-            const currentRange = newMax - newMin;
-            if (currentRange < minRange) {
-                const middle = (newMax + newMin) / 2;
-                newMin = middle - (minRange / 2);
-                newMax = middle + (minRange / 2);
-            }
+            // Calculate new min/max with the effective range
+            const newMin = currentPrice - effectiveRange;
+            const newMax = currentPrice + effectiveRange;
             
-            // Always update the y-axis scale to maintain a consistent, readable range
+            // Always set the y-axis scale, forcing a consistent view
             priceChart.options.scales.y.min = newMin;
             priceChart.options.scales.y.max = newMax;
         }
@@ -726,11 +725,13 @@ function updateSystemUptime() {
 function formatTimestamp(timestamp) {
     if (!timestamp) return '-';
     
+    // Create a Date object which automatically converts the ISO timestamp to local time
     const date = new Date(timestamp);
-    // Explicitly specify the browser's timezone for consistent display
+    
+    // Get the browser's timezone for display purposes
     const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
-    // Using toLocaleString with appropriate options and explicit timezone
+    // Format the date (already in local time) with timezone name
     return date.toLocaleString(undefined, {
         year: 'numeric',
         month: 'numeric',
@@ -739,7 +740,7 @@ function formatTimestamp(timestamp) {
         minute: '2-digit',
         second: '2-digit',
         hour12: false, // Use 24-hour format
-        timeZone: browserTimeZone, // Explicitly use browser timezone
+        // No need to explicitly set timeZone here as the Date is already in local time
         timeZoneName: 'short' // Show timezone abbreviation
     });
 }
