@@ -1061,16 +1061,22 @@ function displayTrades(orders, results) {
             // Get the tax value for this order, prioritizing certain fields
             let tax = 0;
             
+            // Log tax-related fields for debugging
+            console.log(`Order tax info - tax: ${order.tax}, taxableGain: ${order.taxableGain}, taxRate: ${order.taxRate}, estimatedTaxLiability: ${order.estimatedTaxLiability}`);
+            
             // First try to get estimatedTaxLiability (from the backend)
             if (typeof order.estimatedTaxLiability !== 'undefined') {
+                console.log(`Using estimatedTaxLiability: ${order.estimatedTaxLiability}`);
                 tax = order.estimatedTaxLiability;
             } 
             // Directly use the tax field if present - this is set by the backend
             else if (typeof order.tax !== 'undefined') {
+                console.log(`Using tax field: ${order.tax}`);
                 tax = order.tax;
             }
             // Then try to get taxableGain (if present) - should be a fallback
             else if (typeof order.taxableGain !== 'undefined' && typeof order.taxRate !== 'undefined') {
+                console.log(`Calculating tax from taxableGain: ${order.taxableGain} * ${order.taxRate}`);
                 // Only apply tax on positive gains
                 if (order.taxableGain > 0) {
                     tax = order.taxableGain * order.taxRate;
