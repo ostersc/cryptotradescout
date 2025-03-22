@@ -247,8 +247,9 @@ public class RSIAlgorithm implements TradingAlgorithm {
                     buyOrder.setExchange(data.getExchange());
                     buyOrder.setEstimatedTaxLiability(0); // Explicitly set tax to 0 for buys
                     
-                    // Update portfolio
-                    availableCapital -= (cost + fee);
+                    // Update portfolio - only deduct fee, not the cost itself
+                    // The crypto purchase is just converting cash to crypto, not a loss
+                    availableCapital -= fee;  // Only deduct the fee
                     cryptoHoldings += amount;
                     inPosition = true;
                     

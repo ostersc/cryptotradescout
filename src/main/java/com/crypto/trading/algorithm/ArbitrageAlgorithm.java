@@ -320,7 +320,7 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     
                     Order buyOrder = new Order(
                             tradingPair,
-                            OrderType.MARKET,
+                            OrderType.BUY, // Explicitly use BUY instead of MARKET
                             amountToBuy,
                             lowestAsk
                     );
@@ -340,12 +340,14 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     
                     // Update holdings
                     cryptoHoldings += amountToBuy;
-                    currentCapital = 0;
+                    // Only deduct the fee amount, not the entire capital
+                    // The crypto purchase is just converting cash to crypto, not a loss
+                    currentCapital -= buyFeeAmount;
                     
                     // Create a corresponding sell order
                     Order sellOrder = new Order(
                             tradingPair,
-                            OrderType.MARKET,
+                            OrderType.SELL, // Explicitly use SELL instead of MARKET
                             amountToBuy,
                             highestBid
                     );
