@@ -218,35 +218,21 @@ function initializeDashboard() {
 }
 
 /**
- * Initializes the price chart using the chart-manager module
+ * Initializes the market data and chart framework
+ * Chart will be created when first real data arrives
  */
 function initializePriceChart() {
     try {
-        // Get trading pair from UI
-        const pairSelector = document.getElementById('trading-pair-selector');
-        const exchangeSelector = document.getElementById('exchange-selector');
-        const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
-        const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
+        // We don't create a chart immediately
+        // Instead, we'll wait for the first real data to arrive
+        // and then create the chart in updateMarketDataDisplay
         
-        // Create a placeholder data point to initialize the chart
-        // This will be replaced with actual data when it's fetched
-        const initialData = {
-            lastPrice: 0,
-            timestamp: new Date().toISOString()
-        };
+        // We'll set a flag to indicate that the chart needs to be initialized
+        window.chartNeedsInitialization = true;
         
-        // Initialize the chart using the chart manager module
-        // Use ChartManager namespace to avoid conflicts
-        if (typeof ChartManager !== 'undefined' && typeof ChartManager.createPriceChart === 'function') {
-            ChartManager.createPriceChart('price-chart', initialData, currentPair, currentExchange);
-            console.log('Price chart initialized successfully with ChartManager');
-        } else {
-            console.error('ChartManager not found or createPriceChart function not available');
-        }
-        
-        console.log('Price chart initialization attempt completed');
+        console.log('Price chart framework initialized - waiting for first data point');
     } catch (error) {
-        console.error('Error initializing price chart:', error);
+        console.error('Error initializing price chart framework:', error);
     }
 }
 
@@ -359,8 +345,26 @@ function updateMarketDataDisplay(data) {
     volumeElement.textContent = data.volume.toFixed(4);
     timestampElement.textContent = formatTimestamp(data.timestamp);
     
-    // Update chart
-    dashboardUpdatePriceChart(data);
+    // Check if this is the first time we are receiving data
+    if (window.chartNeedsInitialization) {
+        console.log(`Initializing chart with first real data point: ${data.lastPrice}`);
+        window.chartNeedsInitialization = false;
+        
+        // Get trading pair from UI
+        const pairSelector = document.getElementById('trading-pair-selector');
+        const exchangeSelector = document.getElementById('exchange-selector');
+        const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
+        const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
+        
+        // Initialize the chart with the first real data
+        if (typeof ChartManager !== 'undefined' && typeof ChartManager.createPriceChart === 'function') {
+            ChartManager.createPriceChart('price-chart', data, currentPair, currentExchange);
+            console.log('Price chart initialized with first real data point');
+        }
+    } else {
+        // Update existing chart
+        dashboardUpdatePriceChart(data);
+    }
     
     // Update last update time - create Date object in local time zone
     lastUpdateTime = new Date();
