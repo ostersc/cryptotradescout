@@ -140,10 +140,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         break;
                     case 'trading-content':
-                        if (typeof initializeTradingForm === 'function') {
-                            initializeTradingForm();
+                        // Load algorithms first to populate the dropdown
+                        if (typeof loadAlgorithms === 'function') {
+                            loadAlgorithms().then(() => {
+                                // After algorithms are loaded, initialize the trading form
+                                if (typeof initializeTradingForm === 'function') {
+                                    initializeTradingForm();
+                                } else {
+                                    console.warn('Trading form initialization function not found');
+                                }
+                            });
                         } else {
-                            console.warn('Trading form initialization function not found');
+                            console.warn('Algorithms loading function not found');
+                            if (typeof initializeTradingForm === 'function') {
+                                initializeTradingForm();
+                            }
                         }
                         break;
                     case 'ai-advisor-content':
