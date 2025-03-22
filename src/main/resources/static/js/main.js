@@ -146,6 +146,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.warn('Trading form initialization function not found');
                         }
                         break;
+                    case 'ai-advisor-content':
+                        if (typeof initializeAIAdvisor === 'function') {
+                            initializeAIAdvisor();
+                        } else {
+                            console.warn('AI Advisor initialization function not found');
+                        }
+                        break;
                     default:
                         console.warn(`Unknown tab target: ${targetId}`);
                 }

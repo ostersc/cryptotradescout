@@ -29,6 +29,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="trading-tab" data-target="trading-content">Live Trading</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="ai-advisor-tab" data-target="ai-advisor-content">AI Advisor</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -404,6 +407,104 @@
                 </div>
             </div>
         </div>
+
+        <!-- AI Advisor Tab Content -->
+        <div id="ai-advisor-content" class="content-section d-none">
+            <h2>AI Strategy Advisor</h2>
+            <div class="alert alert-info">
+                <strong>How It Works:</strong> The AI advisor analyzes market conditions and recommends the most suitable trading strategies based on current market trends, volatility, and sentiment.
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Market Selection</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="ai-advisor-form">
+                                <div class="mb-3">
+                                    <label for="ai-advisor-exchange" class="form-label">Exchange</label>
+                                    <select id="ai-advisor-exchange" class="form-select" required>
+                                        <option value="Kraken">Kraken</option>
+                                        <option value="Coinbase">Coinbase</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="ai-advisor-pair" class="form-label">Trading Pair</label>
+                                    <select id="ai-advisor-pair" class="form-select" required>
+                                        <option value="BTC-USD">BTC-USD</option>
+                                        <option value="ETH-USD">ETH-USD</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary w-100" id="get-ai-analysis-btn">
+                                    Get AI Recommendations
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Market Analysis</h5>
+                                <span id="ai-analysis-timestamp" class="text-muted small">No analysis yet</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="ai-analysis-loading" class="text-center d-none">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing market conditions...</p>
+                            </div>
+                            <div id="ai-analysis-content" class="d-none">
+                                <div class="row text-center mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6>Market Trend</h6>
+                                                <h4 id="market-trend">-</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6>Market Sentiment</h6>
+                                                <h4 id="market-sentiment">-</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6>Volatility Score</h6>
+                                                <h4 id="volatility-score">-</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <h6>Market Analysis</h6>
+                                    <p id="analysis-explanation" class="text-justify">No analysis available yet. Click "Get AI Recommendations" to analyze current market conditions.</p>
+                                </div>
+                            </div>
+                            <div id="ai-analysis-no-results" class="">
+                                <p class="mb-0 text-center">Get AI recommendations to see analysis results</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h4>Recommended Trading Strategies</h4>
+            <div id="ai-strategies-empty" class="text-center mb-4">
+                <p>No strategies recommended yet. Click "Get AI Recommendations" above to analyze the market.</p>
+            </div>
+            <div id="ai-strategies-container" class="row d-none">
+                <!-- AI-suggested strategies will be displayed here -->
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -412,6 +513,7 @@
     <script src="js/algorithms.js"></script>
     <script src="js/backtest.js"></script>
     <script src="js/trading.js"></script>
+    <script src="js/ai-advisor.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
