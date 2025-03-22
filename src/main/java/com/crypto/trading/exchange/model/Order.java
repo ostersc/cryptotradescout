@@ -29,6 +29,7 @@ public class Order {
      * Default constructor.
      */
     public Order() {
+        this.status = "FILLED"; // Default status for backtesting
         this.fee = 0.0;
         this.tax = 0.0;
         this.feeRate = 0.0;
@@ -54,6 +55,7 @@ public class Order {
         this.amount = amount;
         this.price = price;
         this.createdAt = LocalDateTime.now();
+        this.status = "FILLED"; // Default status for backtesting
         this.fee = 0.0;
         this.tax = 0.0;
         this.feeRate = 0.0;
@@ -81,6 +83,7 @@ public class Order {
         this.amount = amount;
         this.price = price;
         this.createdAt = LocalDateTime.now();
+        this.status = "FILLED"; // Default status for backtesting
         this.feeRate = feeRate;
         this.taxRate = taxRate;
         this.fee = calculateFee();
