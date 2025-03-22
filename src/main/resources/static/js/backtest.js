@@ -82,43 +82,15 @@ function loadAlgorithmsForBacktest() {
  * 
  * @param {Array} algorithms - Array of algorithm objects
  */
+// Using the populateAlgorithmDropdowns function from algorithms.js
+// This is intentionally commented out to avoid duplicates
+/*
 function populateAlgorithmDropdowns(algorithms) {
-    try {
-        // Use a Set to keep track of added algorithm IDs to prevent duplicates
-        const addedAlgorithmIds = new Set();
-        const uniqueAlgorithms = [];
-        
-        // Filter out duplicate algorithms
-        algorithms.forEach(algorithm => {
-            if (!addedAlgorithmIds.has(algorithm.id)) {
-                uniqueAlgorithms.push(algorithm);
-                addedAlgorithmIds.add(algorithm.id);
-            }
-        });
-        
-        const backtestAlgorithm = document.getElementById('backtest-algorithm');
-        
-        if (!backtestAlgorithm) {
-            console.error('Algorithm selector not found');
-            return;
-        }
-        
-        // Clear existing options (except the default/empty one)
-        while (backtestAlgorithm.options.length > 1) {
-            backtestAlgorithm.remove(1);
-        }
-        
-        // Add new options (only using the filtered unique algorithms)
-        uniqueAlgorithms.forEach(algorithm => {
-            const option = document.createElement('option');
-            option.value = algorithm.id;
-            option.textContent = algorithm.name;
-            backtestAlgorithm.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error populating algorithm dropdowns:', error);
-    }
+    // This function is now defined in algorithms.js
+    // We're using that implementation instead to avoid duplicate entries
+    console.warn('Local implementation of populateAlgorithmDropdowns should not be called');
 }
+*/
 
 /**
  * Sets default dates for the backtest period
