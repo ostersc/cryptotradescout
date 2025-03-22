@@ -30,6 +30,8 @@ public class Order {
         this.tax = 0.0;
         this.feeRate = 0.0;
         this.taxRate = 0.0;
+        this.feeAsset = null;
+        this.estimatedTaxLiability = 0.0;
     }
 
     /**
@@ -50,6 +52,8 @@ public class Order {
         this.tax = 0.0;
         this.feeRate = 0.0;
         this.taxRate = 0.0;
+        this.feeAsset = null;
+        this.estimatedTaxLiability = 0.0;
     }
 
     /**
@@ -72,6 +76,8 @@ public class Order {
         this.taxRate = taxRate;
         this.fee = calculateFee();
         this.tax = calculateTax();
+        this.feeAsset = null;
+        this.estimatedTaxLiability = this.tax; // For consistency
     }
 
     /**
@@ -100,6 +106,8 @@ public class Order {
         this.tax = 0.0;
         this.feeRate = 0.0;
         this.taxRate = 0.0;
+        this.feeAsset = null;
+        this.estimatedTaxLiability = 0.0;
     }
 
     /**
@@ -288,6 +296,61 @@ public class Order {
     }
     
     /**
+     * Set the fee amount for this order (alias for setFee for compatibility).
+     * 
+     * @param feeAmount the fee amount to set
+     */
+    public void setFeeAmount(double feeAmount) {
+        this.fee = feeAmount;
+    }
+    
+    /**
+     * The currency/asset in which the fee is denominated.
+     */
+    private String feeAsset;
+    
+    /**
+     * Get the fee asset (currency) for this order.
+     * 
+     * @return the fee asset
+     */
+    public String getFeeAsset() {
+        return feeAsset;
+    }
+    
+    /**
+     * Set the fee asset (currency) for this order.
+     * 
+     * @param feeAsset the fee asset to set
+     */
+    public void setFeeAsset(String feeAsset) {
+        this.feeAsset = feeAsset;
+    }
+    
+    /**
+     * Estimated tax liability for this transaction.
+     */
+    private double estimatedTaxLiability;
+    
+    /**
+     * Get the estimated tax liability for this order.
+     * 
+     * @return the estimated tax liability
+     */
+    public double getEstimatedTaxLiability() {
+        return estimatedTaxLiability;
+    }
+    
+    /**
+     * Set the estimated tax liability for this order.
+     * 
+     * @param estimatedTaxLiability the estimated tax liability to set
+     */
+    public void setEstimatedTaxLiability(double estimatedTaxLiability) {
+        this.estimatedTaxLiability = estimatedTaxLiability;
+    }
+    
+    /**
      * Get the tax for this order.
      * 
      * @return the tax amount
@@ -394,19 +457,21 @@ public class Order {
                 Double.compare(order.tax, tax) == 0 &&
                 Double.compare(order.feeRate, feeRate) == 0 &&
                 Double.compare(order.taxRate, taxRate) == 0 &&
+                Double.compare(order.estimatedTaxLiability, estimatedTaxLiability) == 0 &&
                 Objects.equals(id, order.id) &&
                 Objects.equals(tradingPair, order.tradingPair) &&
                 type == order.type &&
                 Objects.equals(createdAt, order.createdAt) &&
                 Objects.equals(status, order.status) &&
                 Objects.equals(exchange, order.exchange) &&
-                Objects.equals(totalValue, order.totalValue);
+                Objects.equals(totalValue, order.totalValue) &&
+                Objects.equals(feeAsset, order.feeAsset);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(id, tradingPair, type, amount, price, createdAt, status, exchange, totalValue, 
-                           fee, tax, feeRate, taxRate);
+                           fee, tax, feeRate, taxRate, feeAsset, estimatedTaxLiability);
     }
 
     @Override
@@ -425,6 +490,8 @@ public class Order {
                 ", tax=" + tax +
                 ", feeRate=" + feeRate +
                 ", taxRate=" + taxRate +
+                ", feeAsset='" + feeAsset + '\'' +
+                ", estimatedTaxLiability=" + estimatedTaxLiability +
                 '}';
     }
 }

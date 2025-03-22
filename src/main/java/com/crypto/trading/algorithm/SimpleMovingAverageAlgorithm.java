@@ -24,6 +24,9 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
     private int longPeriod = 30;
     private double tradeAmount = 0.01; // Default amount to trade
     private double maxSlippage = 0.5; // Default max slippage in percentage
+    private double feeRate = 0.002; // 0.2% fee rate by default
+    private double taxRate = 0.15; // 15% tax rate by default 
+    private double positionSize = 0.1; // 10% position size by default
     private final Queue<MarketData> dataWindow = new LinkedList<>();
     private boolean lastCrossover = false; // false = below, true = above
     
@@ -74,6 +77,18 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
             this.maxSlippage = (double) parameters.get("maxSlippage");
         }
         
+        if (parameters.containsKey("feeRate")) {
+            this.feeRate = (double) parameters.get("feeRate");
+        }
+        
+        if (parameters.containsKey("taxRate")) {
+            this.taxRate = (double) parameters.get("taxRate");
+        }
+        
+        if (parameters.containsKey("positionSize")) {
+            this.positionSize = (double) parameters.get("positionSize");
+        }
+        
         // Validate that short period is less than long period
         if (shortPeriod >= longPeriod) {
             throw new IllegalArgumentException("Short period must be less than long period");
@@ -82,8 +97,9 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
         // Clear the data window
         dataWindow.clear();
         
-        logger.info("Initialized SimpleMovingAverageAlgorithm with shortPeriod={}, longPeriod={}, tradeAmount={}, maxSlippage={}",
-                shortPeriod, longPeriod, tradeAmount, maxSlippage);
+        logger.info("Initialized SimpleMovingAverageAlgorithm with shortPeriod={}, longPeriod={}, tradeAmount={}, " +
+                "maxSlippage={}, feeRate={}, taxRate={}, positionSize={}",
+                shortPeriod, longPeriod, tradeAmount, maxSlippage, feeRate, taxRate, positionSize);
     }
     
     /**
@@ -190,7 +206,14 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                 if (currentCrossover) {
                     // BUY signal
                     if (currentCapital > 0) {
-                        double amountToBuy = (currentCapital / data.getLastPrice()) * 0.99; // 99% of capital to account for fees
+                        // Calculate position size based on specified parameter
+                        double investmentAmount = currentCapital * positionSize;
+                        
+                        // Calculate the fee
+                        double fee = investmentAmount * feeRate;
+                        
+                        // Amount to buy after fees
+                        double amountToBuy = (investmentAmount - fee) / data.getLastPrice();
                         
                         Order order = new Order(
                                 data.getTradingPair(),
@@ -201,19 +224,35 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         order.setCreatedAt(data.getTimestamp());
                         order.setStatus("FILLED");
                         order.setExchange(data.getExchange());
+                        
+                        // Set fee and tax information in the order
+                        order.setFeeAmount(fee);
+                        order.setFeeAsset(data.getTradingPair().split("-")[1]); // Fee in USD for BTC-USD
+                        order.setFeeRate(feeRate);
+                        
+                        // Add the order to our list
                         generatedOrders.add(order);
                         
                         // Update holdings
                         cryptoHoldings += amountToBuy;
-                        currentCapital = 0;
+                        currentCapital -= (investmentAmount); // Deduct the total investment including fees
                         
-                        logger.debug("Backtest BUY: {} {} at price {} - Capital: {}, Holdings: {}", 
+                        logger.debug("Backtest BUY: {} {} at price {} - Fee: {}, Capital: {}, Holdings: {}", 
                                 amountToBuy, data.getTradingPair().split("-")[0], 
-                                data.getLastPrice(), currentCapital, cryptoHoldings);
+                                data.getLastPrice(), fee, currentCapital, cryptoHoldings);
                     }
                 } else {
                     // SELL signal
                     if (cryptoHoldings > 0) {
+                        // Calculate the gross proceeds
+                        double grossProceeds = cryptoHoldings * data.getLastPrice();
+                        
+                        // Calculate the fee
+                        double fee = grossProceeds * feeRate;
+                        
+                        // Calculate the net proceeds after fees
+                        double netProceeds = grossProceeds - fee;
+                        
                         Order order = new Order(
                                 data.getTradingPair(),
                                 OrderType.MARKET,
@@ -223,15 +262,28 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         order.setCreatedAt(data.getTimestamp());
                         order.setStatus("FILLED");
                         order.setExchange(data.getExchange());
+                        
+                        // Set fee information in the order
+                        order.setFeeAmount(fee);
+                        order.setFeeAsset(data.getTradingPair().split("-")[1]); // Fee in USD for BTC-USD
+                        order.setFeeRate(feeRate);
+                        
+                        // Calculate and set tax information
+                        double estimatedTaxLiability = (grossProceeds - fee) * taxRate;
+                        order.setTaxRate(taxRate);
+                        order.setEstimatedTaxLiability(estimatedTaxLiability);
+                        
+                        // Add the order to our list
                         generatedOrders.add(order);
                         
-                        // Update holdings
-                        currentCapital = cryptoHoldings * data.getLastPrice() * 0.99; // 99% to account for fees
+                        // Update holdings - we include the tax liability in our model to be realistic
+                        currentCapital += netProceeds - estimatedTaxLiability;
                         cryptoHoldings = 0;
                         
-                        logger.debug("Backtest SELL: {} {} at price {} - Capital: {}, Holdings: {}", 
+                        logger.debug("Backtest SELL: {} {} at price {} - Fee: {}, Tax: {}, Net: {}, Capital: {}", 
                                 order.getAmount(), data.getTradingPair().split("-")[0], 
-                                data.getLastPrice(), currentCapital, cryptoHoldings);
+                                data.getLastPrice(), fee, estimatedTaxLiability, netProceeds - estimatedTaxLiability, 
+                                currentCapital);
                     }
                 }
                 
@@ -343,6 +395,48 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
             double maxSlippage = ((Number) parameters.get("maxSlippage")).doubleValue();
             if (maxSlippage < 0) {
                 logger.error("maxSlippage must be non-negative");
+                return false;
+            }
+        }
+        
+        // feeRate is optional, but if present, validate it
+        if (parameters.containsKey("feeRate")) {
+            if (!(parameters.get("feeRate") instanceof Number)) {
+                logger.error("feeRate must be a number");
+                return false;
+            }
+            
+            double feeRate = ((Number) parameters.get("feeRate")).doubleValue();
+            if (feeRate < 0 || feeRate > 1) {
+                logger.error("feeRate must be between 0 and 1");
+                return false;
+            }
+        }
+        
+        // taxRate is optional, but if present, validate it
+        if (parameters.containsKey("taxRate")) {
+            if (!(parameters.get("taxRate") instanceof Number)) {
+                logger.error("taxRate must be a number");
+                return false;
+            }
+            
+            double taxRate = ((Number) parameters.get("taxRate")).doubleValue();
+            if (taxRate < 0 || taxRate > 1) {
+                logger.error("taxRate must be between 0 and 1");
+                return false;
+            }
+        }
+        
+        // positionSize is optional, but if present, validate it
+        if (parameters.containsKey("positionSize")) {
+            if (!(parameters.get("positionSize") instanceof Number)) {
+                logger.error("positionSize must be a number");
+                return false;
+            }
+            
+            double positionSize = ((Number) parameters.get("positionSize")).doubleValue();
+            if (positionSize <= 0 || positionSize > 1) {
+                logger.error("positionSize must be greater than 0 and less than or equal to 1");
                 return false;
             }
         }
