@@ -77,12 +77,25 @@ function loadAlgorithmsForBacktest() {
 }
 
 /**
- * Populates the algorithm dropdown selectors
+ * Populates the algorithm dropdown selectors - using the shared implementation from algorithms.js
+ * This is a local wrapper to ensure compatibility with existing code.
  * 
  * @param {Array} algorithms - Array of algorithm objects
  */
 function populateAlgorithmDropdowns(algorithms) {
     try {
+        // Use a Set to keep track of added algorithm IDs to prevent duplicates
+        const addedAlgorithmIds = new Set();
+        const uniqueAlgorithms = [];
+        
+        // Filter out duplicate algorithms
+        algorithms.forEach(algorithm => {
+            if (!addedAlgorithmIds.has(algorithm.id)) {
+                uniqueAlgorithms.push(algorithm);
+                addedAlgorithmIds.add(algorithm.id);
+            }
+        });
+        
         const backtestAlgorithm = document.getElementById('backtest-algorithm');
         
         if (!backtestAlgorithm) {
@@ -95,8 +108,8 @@ function populateAlgorithmDropdowns(algorithms) {
             backtestAlgorithm.remove(1);
         }
         
-        // Add new options
-        algorithms.forEach(algorithm => {
+        // Add new options (only using the filtered unique algorithms)
+        uniqueAlgorithms.forEach(algorithm => {
             const option = document.createElement('option');
             option.value = algorithm.id;
             option.textContent = algorithm.name;

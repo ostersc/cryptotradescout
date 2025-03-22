@@ -243,20 +243,63 @@ function populateAlgorithmDropdowns(algorithms) {
     const backtestAlgorithmSelect = document.getElementById('backtest-algorithm');
     const tradingAlgorithmSelect = document.getElementById('trading-algorithm');
     
-    // Clear existing options
-    backtestAlgorithmSelect.innerHTML = '';
-    tradingAlgorithmSelect.innerHTML = '';
+    if (!backtestAlgorithmSelect && !tradingAlgorithmSelect) {
+        return;
+    }
     
-    // Add option for each algorithm
+    // Use a Set to track unique algorithm IDs
+    const uniqueAlgorithmIds = new Set();
+    const uniqueAlgorithms = [];
+    
+    // Filter out duplicate algorithms
     algorithms.forEach(algorithm => {
-        const backtestOption = document.createElement('option');
-        backtestOption.value = algorithm.id;
-        backtestOption.textContent = algorithm.name;
-        backtestAlgorithmSelect.appendChild(backtestOption);
-        
-        const tradingOption = document.createElement('option');
-        tradingOption.value = algorithm.id;
-        tradingOption.textContent = algorithm.name;
-        tradingAlgorithmSelect.appendChild(tradingOption);
+        if (!uniqueAlgorithmIds.has(algorithm.id)) {
+            uniqueAlgorithmIds.add(algorithm.id);
+            uniqueAlgorithms.push(algorithm);
+        }
     });
+    
+    // Populate backtest dropdown if it exists
+    if (backtestAlgorithmSelect) {
+        // Clear existing options
+        backtestAlgorithmSelect.innerHTML = '';
+        
+        // Add default option for backtest
+        const defaultBacktestOption = document.createElement('option');
+        defaultBacktestOption.value = '';
+        defaultBacktestOption.textContent = 'Select an algorithm';
+        defaultBacktestOption.disabled = true;
+        defaultBacktestOption.selected = true;
+        backtestAlgorithmSelect.appendChild(defaultBacktestOption);
+        
+        // Add options
+        uniqueAlgorithms.forEach(algorithm => {
+            const option = document.createElement('option');
+            option.value = algorithm.id;
+            option.textContent = algorithm.name;
+            backtestAlgorithmSelect.appendChild(option);
+        });
+    }
+    
+    // Populate trading dropdown if it exists
+    if (tradingAlgorithmSelect) {
+        // Clear existing options
+        tradingAlgorithmSelect.innerHTML = '';
+        
+        // Add default option for trading
+        const defaultTradingOption = document.createElement('option');
+        defaultTradingOption.value = '';
+        defaultTradingOption.textContent = 'Select an algorithm';
+        defaultTradingOption.disabled = true;
+        defaultTradingOption.selected = true;
+        tradingAlgorithmSelect.appendChild(defaultTradingOption);
+        
+        // Add options
+        uniqueAlgorithms.forEach(algorithm => {
+            const option = document.createElement('option');
+            option.value = algorithm.id;
+            option.textContent = algorithm.name;
+            tradingAlgorithmSelect.appendChild(option);
+        });
+    }
 }
