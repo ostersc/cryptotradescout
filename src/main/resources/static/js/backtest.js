@@ -967,14 +967,17 @@ function displayTradeStatistics(orders, results) {
             // Calculate average fee and tax per trade
             totalFees = orders.reduce((sum, order) => sum + (order.feeAmount || order.fee || 0), 0);
             
-            // Calculate total taxes properly from estimatedTaxLiability or tax field, only counting positive values
+            // Calculate total taxes properly from tax field
             totalTaxes = orders.reduce((sum, order) => {
                 let taxAmount = 0;
                 
-                if (typeof order.estimatedTaxLiability !== 'undefined' && order.estimatedTaxLiability > 0) {
-                    taxAmount = order.estimatedTaxLiability;
-                } else if (typeof order.tax !== 'undefined' && order.tax > 0) {
+                // Always use the tax field if it's available, as it's calculated by the backend
+                if (typeof order.tax !== 'undefined') {
                     taxAmount = order.tax;
+                }
+                // Fallback to estimatedTaxLiability if tax is not available
+                else if (typeof order.estimatedTaxLiability !== 'undefined') {
+                    taxAmount = order.estimatedTaxLiability;
                 }
                 
                 return sum + taxAmount;
@@ -1062,16 +1065,18 @@ function displayTrades(orders, results) {
             if (typeof order.estimatedTaxLiability !== 'undefined') {
                 tax = order.estimatedTaxLiability;
             } 
-            // Then try to get taxableGain (if present)
-            else if (typeof order.taxableGain !== 'undefined' && order.taxableGain > 0) {
-                // If we have taxableGain and taxRate, we can calculate the tax
-                if (order.taxRate) {
-                    tax = order.taxableGain * order.taxRate;
-                }
-            } 
-            // Fallback to tax field if present
+            // Directly use the tax field if present - this is set by the backend
             else if (typeof order.tax !== 'undefined') {
                 tax = order.tax;
+            }
+            // Then try to get taxableGain (if present) - should be a fallback
+            else if (typeof order.taxableGain !== 'undefined' && typeof order.taxRate !== 'undefined') {
+                // Only apply tax on positive gains
+                if (order.taxableGain > 0) {
+                    tax = order.taxableGain * order.taxRate;
+                } else {
+                    tax = 0; // No tax on losses
+                }
             }
             
             // Highlight buy/sell with different colors
