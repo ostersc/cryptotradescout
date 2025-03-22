@@ -5,6 +5,8 @@ import com.crypto.trading.exchange.ExchangeService;
 import com.crypto.trading.exchange.model.MarketData;
 import com.crypto.trading.exchange.model.Order;
 import com.crypto.trading.exchange.model.OrderType;
+import com.crypto.trading.tax.TaxCalculator;
+import com.crypto.trading.tax.TaxResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

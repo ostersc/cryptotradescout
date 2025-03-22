@@ -21,6 +21,9 @@ public class Order {
     private double tax; // Estimated tax liability for the transaction
     private double feeRate; // Fee rate applied to this order (e.g., 0.001 for 0.1%)
     private double taxRate; // Tax rate applied to this order
+    private double taxableGain; // Total taxable gain for this transaction
+    private double shortTermGain; // Short-term capital gain (held < 1 year)
+    private double longTermGain; // Long-term capital gain (held >= 1 year)
 
     /**
      * Default constructor.
@@ -32,6 +35,9 @@ public class Order {
         this.taxRate = 0.0;
         this.feeAsset = null;
         this.estimatedTaxLiability = 0.0;
+        this.taxableGain = 0.0;
+        this.shortTermGain = 0.0;
+        this.longTermGain = 0.0;
     }
 
     /**
@@ -54,6 +60,9 @@ public class Order {
         this.taxRate = 0.0;
         this.feeAsset = null;
         this.estimatedTaxLiability = 0.0;
+        this.taxableGain = 0.0;
+        this.shortTermGain = 0.0;
+        this.longTermGain = 0.0;
     }
 
     /**
@@ -78,6 +87,9 @@ public class Order {
         this.tax = calculateTax();
         this.feeAsset = null;
         this.estimatedTaxLiability = this.tax; // For consistency
+        this.taxableGain = 0.0;
+        this.shortTermGain = 0.0;
+        this.longTermGain = 0.0;
     }
 
     /**
@@ -108,6 +120,9 @@ public class Order {
         this.taxRate = 0.0;
         this.feeAsset = null;
         this.estimatedTaxLiability = 0.0;
+        this.taxableGain = 0.0;
+        this.shortTermGain = 0.0;
+        this.longTermGain = 0.0;
     }
 
     /**
@@ -445,6 +460,60 @@ public class Order {
     public double getTotalCost() {
         return getTotalOrderValue() + tax;
     }
+    
+    /**
+     * Get the total taxable gain for this transaction.
+     * 
+     * @return the taxable gain
+     */
+    public double getTaxableGain() {
+        return taxableGain;
+    }
+    
+    /**
+     * Set the total taxable gain for this transaction.
+     * 
+     * @param taxableGain the taxable gain to set
+     */
+    public void setTaxableGain(double taxableGain) {
+        this.taxableGain = taxableGain;
+    }
+    
+    /**
+     * Get the short-term capital gain (assets held < 1 year).
+     * 
+     * @return the short-term gain
+     */
+    public double getShortTermGain() {
+        return shortTermGain;
+    }
+    
+    /**
+     * Set the short-term capital gain.
+     * 
+     * @param shortTermGain the short-term gain to set
+     */
+    public void setShortTermGain(double shortTermGain) {
+        this.shortTermGain = shortTermGain;
+    }
+    
+    /**
+     * Get the long-term capital gain (assets held >= 1 year).
+     * 
+     * @return the long-term gain
+     */
+    public double getLongTermGain() {
+        return longTermGain;
+    }
+    
+    /**
+     * Set the long-term capital gain.
+     * 
+     * @param longTermGain the long-term gain to set
+     */
+    public void setLongTermGain(double longTermGain) {
+        this.longTermGain = longTermGain;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -458,6 +527,9 @@ public class Order {
                 Double.compare(order.feeRate, feeRate) == 0 &&
                 Double.compare(order.taxRate, taxRate) == 0 &&
                 Double.compare(order.estimatedTaxLiability, estimatedTaxLiability) == 0 &&
+                Double.compare(order.taxableGain, taxableGain) == 0 &&
+                Double.compare(order.shortTermGain, shortTermGain) == 0 &&
+                Double.compare(order.longTermGain, longTermGain) == 0 &&
                 Objects.equals(id, order.id) &&
                 Objects.equals(tradingPair, order.tradingPair) &&
                 type == order.type &&
@@ -471,7 +543,8 @@ public class Order {
     @Override
     public int hashCode() {
         return Objects.hash(id, tradingPair, type, amount, price, createdAt, status, exchange, totalValue, 
-                           fee, tax, feeRate, taxRate, feeAsset, estimatedTaxLiability);
+                           fee, tax, feeRate, taxRate, feeAsset, estimatedTaxLiability, 
+                           taxableGain, shortTermGain, longTermGain);
     }
 
     @Override
@@ -492,6 +565,9 @@ public class Order {
                 ", taxRate=" + taxRate +
                 ", feeAsset='" + feeAsset + '\'' +
                 ", estimatedTaxLiability=" + estimatedTaxLiability +
+                ", taxableGain=" + taxableGain +
+                ", shortTermGain=" + shortTermGain +
+                ", longTermGain=" + longTermGain +
                 '}';
     }
 }
