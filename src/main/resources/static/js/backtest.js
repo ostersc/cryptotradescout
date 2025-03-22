@@ -232,6 +232,9 @@ function getDefaultParameters(algorithmId) {
  */
 function populateAlgorithmParameters(algorithm, container) {
     if (algorithm.parameters) {
+        // First, completely empty the container to prevent parameter overlap
+        container.innerHTML = '';
+        
         // Add a title for the parameters section
         const title = document.createElement('h6');
         title.className = 'mt-3 mb-2';
@@ -241,7 +244,8 @@ function populateAlgorithmParameters(algorithm, container) {
         // Create input fields for each parameter
         for (const [param, description] of Object.entries(algorithm.parameters)) {
             const paramDiv = document.createElement('div');
-            paramDiv.className = 'mb-3';
+            paramDiv.className = 'mb-3 algorithm-param-field';
+            paramDiv.dataset.paramName = param; // Add data attribute to track the parameter name
             
             const label = document.createElement('label');
             label.setAttribute('for', `param-${param}`);
