@@ -5,6 +5,20 @@
 // Store recommended parameters for each algorithm to pass between tabs
 let recommendedAlgorithmParameters = {};
 
+// Initialize parameters from localStorage on page load
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const storedParams = localStorage.getItem('recommendedAlgorithmParameters');
+        if (storedParams) {
+            recommendedAlgorithmParameters = JSON.parse(storedParams);
+            console.log('Loaded recommended parameters from localStorage:', recommendedAlgorithmParameters);
+        }
+    } catch (error) {
+        console.error('Error loading parameters from localStorage:', error);
+        recommendedAlgorithmParameters = {};
+    }
+});
+
 /**
  * Initializes the AI advisor
  */
@@ -18,8 +32,12 @@ function initializeAIAdvisor() {
             getAnalysisBtn.addEventListener('click', getAIRecommendations);
         }
         
-        // Reset recommended parameters
-        recommendedAlgorithmParameters = {};
+        // Log the available recommended parameters from localStorage
+        if (Object.keys(recommendedAlgorithmParameters).length > 0) {
+            console.log('AI Advisor initialized with existing parameters:', recommendedAlgorithmParameters);
+        } else {
+            console.log('AI Advisor initialized with no existing parameters');
+        }
         
         console.log('AI Advisor initialized');
     } catch (error) {
@@ -224,8 +242,9 @@ function displayAIAnalysis(analysis) {
             // Clear previous suggestions
             strategiesContainer.innerHTML = '';
             
-            // Clear the recommended parameters storage
-            recommendedAlgorithmParameters = {};
+            // Clear the recommended parameters storage only for displayed algorithms
+            // to avoid wiping out other algorithm data that might be useful
+            const newRecommendedParams = { ...recommendedAlgorithmParameters };
             
             // Sort suggestions by confidence score (descending)
             const sortedSuggestions = [...analysis.algorithmSuggestions].sort((a, b) => 
@@ -236,7 +255,7 @@ function displayAIAnalysis(analysis) {
             sortedSuggestions.forEach(suggestion => {
                 // Store the parameters for later use
                 if (suggestion.algorithmId && suggestion.recommendedParameters) {
-                    recommendedAlgorithmParameters[suggestion.algorithmId] = suggestion.recommendedParameters;
+                    newRecommendedParams[suggestion.algorithmId] = suggestion.recommendedParameters;
                     console.log(`Stored recommended parameters for ${suggestion.algorithmId}:`, suggestion.recommendedParameters);
                 }
                 
@@ -244,6 +263,17 @@ function displayAIAnalysis(analysis) {
                 const algorithmCard = createAlgorithmSuggestionCard(suggestion);
                 strategiesContainer.appendChild(algorithmCard);
             });
+            
+            // Update the recommended parameters
+            recommendedAlgorithmParameters = newRecommendedParams;
+            
+            // Save to localStorage
+            try {
+                localStorage.setItem('recommendedAlgorithmParameters', JSON.stringify(recommendedAlgorithmParameters));
+                console.log('Saved recommended parameters to localStorage');
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+            }
         } else {
             strategiesEmptyElement.classList.remove('d-none');
             strategiesContainer.classList.add('d-none');
@@ -460,6 +490,14 @@ function applyParametersToInputs(inputElements, params, algorithmId) {
         }
     });
     
+    // Save to localStorage again to ensure persistence
+    try {
+        localStorage.setItem('recommendedAlgorithmParameters', JSON.stringify(recommendedAlgorithmParameters));
+        console.log('Saved parameters to localStorage after applying them');
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
+    
     if (parameterCount > 0) {
         // Show a confirmation alert
         alert(`Parameters for ${algorithmId} have been set. You can now start live trading with these optimized parameters.`);
@@ -581,6 +619,14 @@ function applyBacktestParameters(inputElements, params, algorithmId) {
             parameterCount++;
         }
     });
+    
+    // Save to localStorage again to ensure persistence
+    try {
+        localStorage.setItem('recommendedAlgorithmParameters', JSON.stringify(recommendedAlgorithmParameters));
+        console.log('Saved parameters to localStorage after applying them to backtest');
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
     
     // Set the default dates
     if (typeof setDefaultDates === 'function') {
