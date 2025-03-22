@@ -493,6 +493,19 @@ function updatePriceChart(data) {
             hour12: false  // Use 24-hour format
         });
         
+        // Clear chart data if trading pair or exchange has changed
+        const pairSelector = document.getElementById('trading-pair-selector');
+        const exchangeSelector = document.getElementById('exchange-selector');
+        const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
+        const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
+        
+        // If trading pair changed, reset chart
+        if (priceChart.data.datasets[0].label !== `${currentPair} (${currentExchange})`) {
+            priceChart.data.labels = [];
+            priceChart.data.datasets[0].data = [];
+            priceChart.data.datasets[0].label = `${currentPair} (${currentExchange})`;
+        }
+        
         // Add the formatted local time to the chart
         priceChart.data.labels.push(localTimeString);
         priceChart.data.datasets[0].data.push(data.lastPrice);
@@ -503,13 +516,56 @@ function updatePriceChart(data) {
             priceChart.data.datasets[0].data.shift();
         }
         
-        // ABSOLUTELY FIXED SCALE: Always maintain the same scale regardless of updates
-        // These are set once at the beginning and never changed
-        const basePrice = 84230;
-        priceChart.options.scales.y.min = basePrice * 0.99;  // 1% below
-        priceChart.options.scales.y.max = basePrice * 1.01;  // 1% above
+        // DYNAMIC SCALING: Calculate the appropriate scale based on current data
+        // This ensures the chart scale adapts to different cryptocurrencies
         
-        // Force Chart.js to respect our fixed scale by disabling auto-scaling
+        if (priceChart.data.datasets[0].data.length > 0) {
+            const prices = priceChart.data.datasets[0].data;
+            const currentPrice = data.lastPrice; // Use the latest price
+            
+            // Use a percentage range around the current price (±1.5%)
+            const rangePercent = 0.015; // 1.5% margin on top and bottom
+            
+            // Ensure a minimum absolute range (different for different price magnitudes)
+            // For higher-priced assets like BTC, we want a wider range
+            // For lower-priced assets like ETH, we want a narrower range
+            let minAbsoluteRange;
+            
+            if (currentPrice > 50000) {         // BTC range (> $50,000)
+                minAbsoluteRange = 500;
+            } else if (currentPrice > 5000) {   // High-priced assets ($5,000-$50,000)
+                minAbsoluteRange = 100;
+            } else if (currentPrice > 1000) {   // Mid-priced assets ($1,000-$5,000)
+                minAbsoluteRange = 50;
+            } else if (currentPrice > 100) {    // Low-priced assets ($100-$1,000)
+                minAbsoluteRange = 10;
+            } else if (currentPrice > 10) {     // Very low-priced assets ($10-$100)
+                minAbsoluteRange = 5;
+            } else if (currentPrice > 1) {      // Micro-priced assets ($1-$10)
+                minAbsoluteRange = 1;
+            } else {                            // Sub-dollar assets (< $1)
+                minAbsoluteRange = 0.1;
+            }
+            
+            // Calculate percentage-based range
+            const percentRange = currentPrice * rangePercent;
+            
+            // Use the larger of percentage-based range or absolute minimum range
+            const effectiveRange = Math.max(percentRange, minAbsoluteRange / 2);
+            
+            // Calculate new min/max with the effective range
+            const newMin = Math.max(0, currentPrice - effectiveRange); // Never go below zero
+            const newMax = currentPrice + effectiveRange;
+            
+            // Apply the new scale to the chart
+            priceChart.options.scales.y.min = newMin;
+            priceChart.options.scales.y.max = newMax;
+            
+            // Update chart title to reflect current pair
+            priceChart.options.plugins.title.text = `${currentPair} Price (${currentExchange})`;
+        }
+        
+        // Force Chart.js to respect our scale by disabling auto-scaling
         priceChart.options.scales.y.beginAtZero = false;
         priceChart.options.scales.y.grace = 0;
         priceChart.options.scales.y.ticks.autoSkip = false;
