@@ -807,11 +807,18 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
         const tradeDays = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
         const annualizedReturn = (Math.pow(1 + returnPercent / 100, 365 / tradeDays) - 1) * 100;
         
-        // Calculate total fees and taxes
+        // Get total fees and taxes from the backend metrics if available, or calculate from orders
         let totalFees = 0;
         let totalTaxes = 0;
         
-        if (orders.length > 0) {
+        // Use backend-calculated metrics if available
+        if (results.metrics && typeof results.metrics.totalFees !== 'undefined') {
+            totalFees = results.metrics.totalFees;
+            totalTaxes = results.metrics.totalTaxes || 0;
+            console.log("Using backend metrics - Total fees:", totalFees, "Total taxes:", totalTaxes);
+        } else if (orders.length > 0) {
+            // Fallback to manual calculation only if backend metrics aren't available
+            console.log("Backend metrics not available, calculating manually");
             orders.forEach(order => {
                 totalFees += (order.feeAmount || order.fee || 0);
                 
@@ -901,7 +908,7 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
  * 
  * @param {Array} orders - Array of order objects
  */
-function displayTradeStatistics(orders) {
+function displayTradeStatistics(orders, results) {
     try {
         const statsTable = document.getElementById('trade-statistics');
         
@@ -919,41 +926,62 @@ function displayTradeStatistics(orders) {
             return;
         }
         
-        // Calculate trade statistics
-        const totalTrades = orders.length;
-        const averageTradeSize = orders.reduce((sum, order) => {
-            return sum + ((order.price || 0) * (order.amount || 0));
-        }, 0) / totalTrades;
+        // Prepare statistics - use backend metrics when available
+        let totalTrades, buyCount, sellCount, totalFees, totalTaxes, averageTradeSize, 
+            averageFeePerTrade, averageTaxPerTrade;
         
-        // Calculate buy/sell counts
-        let buyCount = 0;
-        let sellCount = 0;
-        orders.forEach(order => {
-            if (order.type && order.type.toUpperCase() === 'BUY') {
-                buyCount++;
-            } else if (order.type && order.type.toUpperCase() === 'SELL') {
-                sellCount++;
-            }
-        });
-        
-        // Calculate average fee and tax per trade
-        const totalFees = orders.reduce((sum, order) => sum + (order.feeAmount || order.fee || 0), 0);
-        
-        // Calculate total taxes properly from estimatedTaxLiability or tax field, only counting positive values
-        const totalTaxes = orders.reduce((sum, order) => {
-            let taxAmount = 0;
+        // Check if we have metrics from the backend
+        if (results && results.metrics) {
+            console.log("Using backend statistics from metrics:", results.metrics);
             
-            if (typeof order.estimatedTaxLiability !== 'undefined' && order.estimatedTaxLiability > 0) {
-                taxAmount = order.estimatedTaxLiability;
-            } else if (typeof order.tax !== 'undefined' && order.tax > 0) {
-                taxAmount = order.tax;
-            }
+            // Use values from backend metrics when available
+            totalTrades = results.metrics.totalTrades || orders.length;
+            buyCount = results.metrics.buyCount || 0;
+            sellCount = results.metrics.sellCount || 0;
+            totalFees = results.metrics.totalFees || 0;
+            totalTaxes = results.metrics.totalTaxes || 0;
+            averageTradeSize = results.metrics.averageTradeSize || 0;
+            averageFeePerTrade = results.metrics.averageFeePerTrade || (totalFees / Math.max(1, totalTrades));
+            averageTaxPerTrade = results.metrics.averageTaxPerTrade || (totalTaxes / Math.max(1, totalTrades));
+        } else {
+            console.log("Calculating statistics manually from orders");
             
-            return sum + taxAmount;
-        }, 0);
-        
-        const averageFeePerTrade = totalFees / totalTrades;
-        const averageTaxPerTrade = totalTaxes / totalTrades;
+            // Manual calculation as before
+            totalTrades = orders.length;
+            averageTradeSize = orders.reduce((sum, order) => {
+                return sum + ((order.price || 0) * (order.amount || 0));
+            }, 0) / totalTrades;
+            
+            // Calculate buy/sell counts
+            buyCount = 0;
+            sellCount = 0;
+            orders.forEach(order => {
+                if (order.type && order.type.toUpperCase() === 'BUY') {
+                    buyCount++;
+                } else if (order.type && order.type.toUpperCase() === 'SELL') {
+                    sellCount++;
+                }
+            });
+            
+            // Calculate average fee and tax per trade
+            totalFees = orders.reduce((sum, order) => sum + (order.feeAmount || order.fee || 0), 0);
+            
+            // Calculate total taxes properly from estimatedTaxLiability or tax field, only counting positive values
+            totalTaxes = orders.reduce((sum, order) => {
+                let taxAmount = 0;
+                
+                if (typeof order.estimatedTaxLiability !== 'undefined' && order.estimatedTaxLiability > 0) {
+                    taxAmount = order.estimatedTaxLiability;
+                } else if (typeof order.tax !== 'undefined' && order.tax > 0) {
+                    taxAmount = order.tax;
+                }
+                
+                return sum + taxAmount;
+            }, 0);
+            
+            averageFeePerTrade = totalFees / totalTrades;
+            averageTaxPerTrade = totalTaxes / totalTrades;
+        }
         
         // Get fee and tax rates if available from the first order
         const feeRate = (orders[0].feeRate || 0) * 100; // Convert to percentage
