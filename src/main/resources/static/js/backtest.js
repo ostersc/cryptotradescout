@@ -807,6 +807,17 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
         const tradeDays = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
         const annualizedReturn = (Math.pow(1 + returnPercent / 100, 365 / tradeDays) - 1) * 100;
         
+        // Calculate total fees and taxes
+        let totalFees = 0;
+        let totalTaxes = 0;
+        
+        if (orders.length > 0) {
+            orders.forEach(order => {
+                totalFees += (order.fee || 0);
+                totalTaxes += (order.tax || 0);
+            });
+        }
+        
         // Calculate drawdown
         let maxDrawdown = 0;
         let maxEquity = initialCapital;
@@ -832,12 +843,20 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
             });
         }
         
+        // Calculate net profit (after fees and taxes)
+        const netProfit = profit - totalFees - totalTaxes;
+        const netReturnPercent = (netProfit / initialCapital) * 100;
+        
         // Add metrics to the table
         const metrics = [
-            { name: 'Total Return', value: `${returnPercent >= 0 ? '+' : ''}${returnPercent.toFixed(2)}%`, positive: returnPercent >= 0 },
+            { name: 'Total Return (gross)', value: `${returnPercent >= 0 ? '+' : ''}${returnPercent.toFixed(2)}%`, positive: returnPercent >= 0 },
+            { name: 'Total Return (net)', value: `${netReturnPercent >= 0 ? '+' : ''}${netReturnPercent.toFixed(2)}%`, positive: netReturnPercent >= 0 },
             { name: 'Annualized Return', value: `${annualizedReturn >= 0 ? '+' : ''}${annualizedReturn.toFixed(2)}%`, positive: annualizedReturn >= 0 },
             { name: 'Max Drawdown', value: `-${maxDrawdown.toFixed(2)}%`, positive: false },
-            { name: 'Profit/Loss', value: formatCurrency(profit), positive: profit >= 0 },
+            { name: 'Total Trading Fees', value: formatCurrency(totalFees), positive: false },
+            { name: 'Total Taxes', value: formatCurrency(totalTaxes), positive: false },
+            { name: 'Profit/Loss (gross)', value: formatCurrency(profit), positive: profit >= 0 },
+            { name: 'Profit/Loss (net)', value: formatCurrency(netProfit), positive: netProfit >= 0 },
             { name: 'Test Period', value: `${tradeDays} days` }
         ];
         
@@ -849,8 +868,15 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
             
             const valueCell = document.createElement('td');
             valueCell.textContent = metric.value;
-            if (metric.hasOwnProperty('positive')) {
-                valueCell.className = metric.positive ? 'positive-value' : 'negative-value';
+            
+            // Color coding: green for positive values, red for negative, neutral for informational fields
+            if (metric.name === 'Test Period') {
+                // No special coloring for test period
+            } else if (metric.name === 'Total Trading Fees' || metric.name === 'Total Taxes' || metric.name === 'Max Drawdown') {
+                // These are always costs, but don't use negative coloring if zero
+                valueCell.className = (parseFloat(metric.value) === 0) ? '' : 'text-danger';
+            } else if (metric.hasOwnProperty('positive')) {
+                valueCell.className = metric.positive ? 'text-success' : 'text-danger';
             }
             
             row.appendChild(nameCell);
@@ -891,10 +917,37 @@ function displayTradeStatistics(orders) {
             return sum + ((order.price || 0) * (order.amount || 0));
         }, 0) / totalTrades;
         
+        // Calculate buy/sell counts
+        let buyCount = 0;
+        let sellCount = 0;
+        orders.forEach(order => {
+            if (order.type && order.type.toUpperCase() === 'BUY') {
+                buyCount++;
+            } else if (order.type && order.type.toUpperCase() === 'SELL') {
+                sellCount++;
+            }
+        });
+        
+        // Calculate average fee and tax per trade
+        const totalFees = orders.reduce((sum, order) => sum + (order.fee || 0), 0);
+        const totalTaxes = orders.reduce((sum, order) => sum + (order.tax || 0), 0);
+        const averageFeePerTrade = totalFees / totalTrades;
+        const averageTaxPerTrade = totalTaxes / totalTrades;
+        
+        // Get fee and tax rates if available from the first order
+        const feeRate = (orders[0].feeRate || 0) * 100; // Convert to percentage
+        const taxRate = (orders[0].taxRate || 0) * 100; // Convert to percentage
+        
         // Add statistics to the table
         const statistics = [
             { name: 'Total Trades', value: totalTrades },
+            { name: 'Buy Orders', value: buyCount },
+            { name: 'Sell Orders', value: sellCount },
             { name: 'Average Trade Size', value: formatCurrency(averageTradeSize) },
+            { name: 'Fee Rate', value: `${feeRate.toFixed(2)}%` },
+            { name: 'Tax Rate', value: `${taxRate.toFixed(2)}%` },
+            { name: 'Average Fee Per Trade', value: formatCurrency(averageFeePerTrade) },
+            { name: 'Average Tax Per Trade', value: formatCurrency(averageTaxPerTrade) },
             { name: 'First Trade', value: new Date(orders[0].createdAt || new Date()).toLocaleDateString() },
             { name: 'Last Trade', value: new Date(orders[orders.length - 1].createdAt || new Date()).toLocaleDateString() },
             { name: 'Trading Pair', value: orders[0].tradingPair || 'Unknown' },
@@ -937,7 +990,7 @@ function displayTrades(orders) {
         
         if (!orders || orders.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="5" class="text-center">No trades executed</td>';
+            row.innerHTML = '<td colspan="7" class="text-center">No trades executed</td>';
             tradesTable.appendChild(row);
             return;
         }
@@ -949,13 +1002,20 @@ function displayTrades(orders) {
             const type = order.type || 'Unknown';
             const price = order.price || 0;
             const amount = order.amount || 0;
+            const fee = order.fee || 0;
+            const tax = order.tax || 0;
+            
+            // Highlight buy/sell with different colors
+            const typeClass = type.toUpperCase() === 'BUY' ? 'text-success' : 'text-danger';
             
             row.innerHTML = `
                 <td>${createdAt}</td>
-                <td>${type}</td>
+                <td class="${typeClass}">${type}</td>
                 <td>${formatCurrency(price)}</td>
                 <td>${amount.toFixed(8)}</td>
                 <td>${formatCurrency(price * amount)}</td>
+                <td>${formatCurrency(fee)}</td>
+                <td>${formatCurrency(tax)}</td>
             `;
             
             tradesTable.appendChild(row);

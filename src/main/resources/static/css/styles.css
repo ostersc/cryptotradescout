@@ -75,12 +75,32 @@ body {
     font-weight: 500;
 }
 
-.positive-value {
+.positive-value, .text-success {
     color: #28a745;
 }
 
-.negative-value {
+.negative-value, .text-danger {
     color: #dc3545;
+}
+
+/* Fee and tax indicators */
+.fee-cell, .tax-cell {
+    font-style: italic;
+}
+
+/* Trading metrics formatting */
+#performance-metrics .metric-name {
+    font-weight: 500;
+}
+
+#performance-metrics .metric-value {
+    text-align: right;
+}
+
+/* Highlight totals */
+.total-row td {
+    font-weight: bold;
+    border-top: 2px solid #dee2e6;
 }
 
 /* Responsive adjustments */
