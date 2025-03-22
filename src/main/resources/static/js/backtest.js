@@ -57,7 +57,16 @@ function loadAlgorithmsForBacktest() {
             })
             .then(algorithms => {
                 if (Array.isArray(algorithms)) {
-                    populateAlgorithmDropdowns(algorithms);
+                    // Use the implementation from algorithms.js instead of our own
+                    // Use the global implementation, not the local one
+                    if (typeof window.populateAlgorithmDropdowns === 'function') {
+                        window.populateAlgorithmDropdowns(algorithms);
+                    } else if (typeof populateAlgorithmDropdowns === 'function') {
+                        // Fall back to global scope function if not defined in window
+                        populateAlgorithmDropdowns(algorithms);
+                    } else {
+                        console.error('populateAlgorithmDropdowns function not found');
+                    }
                 } else {
                     console.error('Invalid algorithms data format:', algorithms);
                 }
@@ -69,7 +78,15 @@ function loadAlgorithmsForBacktest() {
                     { id: 'simple-moving-average', name: 'Simple Moving Average Crossover' },
                     { id: 'arbitrage', name: 'Exchange Arbitrage' }
                 ];
-                populateAlgorithmDropdowns(defaultAlgorithms);
+                // Use the implementation from algorithms.js
+                if (typeof window.populateAlgorithmDropdowns === 'function') {
+                    window.populateAlgorithmDropdowns(defaultAlgorithms);
+                } else if (typeof populateAlgorithmDropdowns === 'function') {
+                    // Fall back to global scope function if not defined in window
+                    populateAlgorithmDropdowns(defaultAlgorithms);
+                } else {
+                    console.error('populateAlgorithmDropdowns function not found');
+                }
             });
     } catch (error) {
         console.error('Error loading algorithms for backtest:', error);
