@@ -2,6 +2,9 @@
  * AI Advisor JavaScript file for handling AI-powered trading strategy recommendations
  */
 
+// Store recommended parameters for each algorithm to pass between tabs
+let recommendedAlgorithmParameters = {};
+
 /**
  * Initializes the AI advisor
  */
@@ -14,6 +17,9 @@ function initializeAIAdvisor() {
         if (getAnalysisBtn) {
             getAnalysisBtn.addEventListener('click', getAIRecommendations);
         }
+        
+        // Reset recommended parameters
+        recommendedAlgorithmParameters = {};
         
         console.log('AI Advisor initialized');
     } catch (error) {
@@ -120,13 +126,23 @@ function displayAIAnalysis(analysis) {
             // Clear previous suggestions
             strategiesContainer.innerHTML = '';
             
+            // Clear the recommended parameters storage
+            recommendedAlgorithmParameters = {};
+            
             // Sort suggestions by confidence score (descending)
             const sortedSuggestions = [...analysis.algorithmSuggestions].sort((a, b) => 
                 b.confidenceScore - a.confidenceScore
             );
             
-            // Create cards for each suggestion
+            // Store the recommended parameters for each algorithm
             sortedSuggestions.forEach(suggestion => {
+                // Store the parameters for later use
+                if (suggestion.algorithmId && suggestion.recommendedParameters) {
+                    recommendedAlgorithmParameters[suggestion.algorithmId] = suggestion.recommendedParameters;
+                    console.log(`Stored recommended parameters for ${suggestion.algorithmId}:`, suggestion.recommendedParameters);
+                }
+                
+                // Create cards for each suggestion
                 const algorithmCard = createAlgorithmSuggestionCard(suggestion);
                 strategiesContainer.appendChild(algorithmCard);
             });
@@ -241,6 +257,14 @@ function formatParameterName(name) {
  */
 function useRecommendedParameters(algorithmId) {
     try {
+        // Make sure we have recommended parameters for this algorithm
+        if (!recommendedAlgorithmParameters[algorithmId]) {
+            console.error(`No recommended parameters found for algorithm ${algorithmId}`);
+            return;
+        }
+        
+        console.log(`Applying parameters for algorithm ${algorithmId}:`, recommendedAlgorithmParameters[algorithmId]);
+        
         // Switch to the trading tab
         const tradingTab = document.getElementById('trading-tab');
         if (tradingTab) {
@@ -250,14 +274,34 @@ function useRecommendedParameters(algorithmId) {
             setTimeout(() => {
                 const algorithmSelect = document.getElementById('trading-algorithm');
                 if (algorithmSelect) {
+                    // Set the algorithm selection
                     algorithmSelect.value = algorithmId;
                     
                     // Trigger the change event to load parameters
                     const event = new Event('change');
                     algorithmSelect.dispatchEvent(event);
                     
-                    // TODO: Set the recommended parameters in the trading form
-                    console.log(`Using recommended parameters for ${algorithmId}`);
+                    // Give some time for the parameters to be loaded
+                    setTimeout(() => {
+                        // Now set the recommended parameter values
+                        const params = recommendedAlgorithmParameters[algorithmId];
+                        
+                        // Find all parameter input fields
+                        const paramInputs = document.querySelectorAll('#trading-algorithm-params-container input');
+                        
+                        paramInputs.forEach(input => {
+                            const paramName = input.id.replace('trading-param-', '');
+                            
+                            // Check if we have a recommended value for this parameter
+                            if (params.hasOwnProperty(paramName)) {
+                                input.value = params[paramName];
+                                console.log(`Set parameter ${paramName} to ${params[paramName]}`);
+                            }
+                        });
+                        
+                        // Show a confirmation alert
+                        alert(`Parameters for ${algorithmId} have been set. You can now start live trading with these optimized parameters.`);
+                    }, 1000); // Wait for the parameters to be loaded
                 }
             }, 500);
         }
@@ -273,6 +317,14 @@ function useRecommendedParameters(algorithmId) {
  */
 function backtestWithParameters(algorithmId) {
     try {
+        // Make sure we have recommended parameters for this algorithm
+        if (!recommendedAlgorithmParameters[algorithmId]) {
+            console.error(`No recommended parameters found for algorithm ${algorithmId}`);
+            return;
+        }
+        
+        console.log(`Setting up backtest with parameters for algorithm ${algorithmId}:`, recommendedAlgorithmParameters[algorithmId]);
+        
         // Switch to the backtest tab
         const backtestTab = document.getElementById('backtest-tab');
         if (backtestTab) {
@@ -282,14 +334,39 @@ function backtestWithParameters(algorithmId) {
             setTimeout(() => {
                 const algorithmSelect = document.getElementById('backtest-algorithm');
                 if (algorithmSelect) {
+                    // Set the algorithm selection
                     algorithmSelect.value = algorithmId;
                     
                     // Trigger the change event to load parameters
                     const event = new Event('change');
                     algorithmSelect.dispatchEvent(event);
                     
-                    // TODO: Set the recommended parameters in the backtest form
-                    console.log(`Setting up backtest for ${algorithmId}`);
+                    // Give some time for the parameters to be loaded
+                    setTimeout(() => {
+                        // Now set the recommended parameter values
+                        const params = recommendedAlgorithmParameters[algorithmId];
+                        
+                        // Find all parameter input fields
+                        const paramInputs = document.querySelectorAll('#algorithm-params-container input');
+                        
+                        paramInputs.forEach(input => {
+                            const paramName = input.id.replace('param-', '');
+                            
+                            // Check if we have a recommended value for this parameter
+                            if (params.hasOwnProperty(paramName)) {
+                                input.value = params[paramName];
+                                console.log(`Set backtest parameter ${paramName} to ${params[paramName]}`);
+                            }
+                        });
+                        
+                        // Set the default dates
+                        if (typeof setDefaultDates === 'function') {
+                            setDefaultDates();
+                        }
+                        
+                        // Show a confirmation alert
+                        alert(`Parameters for ${algorithmId} have been set. You can now run a backtest with these optimized parameters.`);
+                    }, 1000); // Wait for the parameters to be loaded
                 }
             }, 500);
         }
