@@ -496,10 +496,12 @@ function updatePriceChart(data) {
         if (priceChart.data.datasets[0].label !== currentChartLabel) {
             // Save the incoming data point so we don't lose it
             const currentPrice = data.lastPrice;
+            const currentTime = new Date();
+            const localTimeString = formatTimestamp(currentTime);
             
-            // Reset chart data
-            priceChart.data.labels = [];
-            priceChart.data.datasets[0].data = [];
+            // Reset chart data and immediately add the first point
+            priceChart.data.labels = [localTimeString];
+            priceChart.data.datasets[0].data = [currentPrice];
             priceChart.data.datasets[0].label = currentChartLabel;
             
             // Update chart title
@@ -511,7 +513,16 @@ function updatePriceChart(data) {
             priceChart.options.scales.y.min = Math.max(0, currentPrice - buffer);
             priceChart.options.scales.y.max = currentPrice + buffer;
             
+            // Force an immediate update to display the first data point
+            priceChart.update({
+                duration: 0,
+                easing: 'linear'
+            });
+            
             console.log(`Resetting chart for ${currentChartLabel} with initial price: ${currentPrice}`);
+            
+            // Since we've already added the data point, return to avoid adding it twice
+            return;
         }
         
         // Add the formatted local time to the chart
