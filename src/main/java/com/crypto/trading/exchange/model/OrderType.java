@@ -12,7 +12,17 @@ public enum OrderType {
     /**
      * Limit order - executed only at the specified price or better.
      */
-    LIMIT
+    LIMIT,
+    
+    /**
+     * Buy order - purchase of cryptocurrency.
+     */
+    BUY,
+    
+    /**
+     * Sell order - sale of cryptocurrency.
+     */
+    SELL
     
     // Additional order types can be added here as the system evolves
     // For example: STOP_LOSS, STOP_LIMIT, etc.

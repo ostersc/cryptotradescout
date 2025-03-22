@@ -226,13 +226,24 @@ public class BacktestService {
             sharpeRatio = averageReturn / volatility;
         }
         
+        // Calculate total fees and taxes
+        double totalFees = 0.0;
+        double totalTaxes = 0.0;
+        
+        for (Order order : orders) {
+            totalFees += order.getFee();
+            totalTaxes += order.getTax();
+        }
+        
         return new PerformanceMetrics(
                 totalProfit,
                 totalReturnPercentage,
                 maxDrawdown,
                 orders.size(),
                 volatility * 100, // Convert to percentage
-                sharpeRatio
+                sharpeRatio,
+                totalFees,
+                totalTaxes
         );
     }
     
@@ -423,13 +434,27 @@ public class BacktestService {
             maxDrawdown *= 1.1; // With higher drawdown
         }
         
+        // Calculate sample fees and taxes based on trading volume
+        double tradingVolume = generatedOrders.stream()
+                .mapToDouble(order -> order.getAmount() * order.getPrice())
+                .sum();
+        
+        // Typical exchange fee rate: 0.1% to 0.5%
+        double sampleFeeRate = 0.002; // 0.2%
+        double sampleTaxRate = 0.15; // 15% capital gains tax
+        
+        double totalFees = tradingVolume * sampleFeeRate;
+        double totalTaxes = Math.max(0, totalProfit * sampleTaxRate); // Only tax profits
+        
         PerformanceMetrics metrics = new PerformanceMetrics(
                 totalProfit,
                 returnPercentage,
                 maxDrawdown,
                 generatedOrders.size(),
                 8.5, // Sample volatility
-                0.75 // Sample Sharpe ratio
+                0.75, // Sample Sharpe ratio
+                totalFees,
+                totalTaxes
         );
         
         // Create and return the result with simulated data flag set to true

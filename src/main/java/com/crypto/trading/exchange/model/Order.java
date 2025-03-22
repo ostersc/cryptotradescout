@@ -5,6 +5,7 @@ import java.util.Objects;
 
 /**
  * Represents a cryptocurrency order with details like trading pair, type, amount, and price.
+ * Enhanced with fee and tax tracking capabilities.
  */
 public class Order {
     private String id;
@@ -16,11 +17,19 @@ public class Order {
     private String status;
     private String exchange;
     private Double totalValue; // Portfolio value at the time of the order, used for backtesting
+    private double fee; // Exchange fee for the transaction
+    private double tax; // Estimated tax liability for the transaction
+    private double feeRate; // Fee rate applied to this order (e.g., 0.001 for 0.1%)
+    private double taxRate; // Tax rate applied to this order
 
     /**
      * Default constructor.
      */
     public Order() {
+        this.fee = 0.0;
+        this.tax = 0.0;
+        this.feeRate = 0.0;
+        this.taxRate = 0.0;
     }
 
     /**
@@ -37,6 +46,32 @@ public class Order {
         this.amount = amount;
         this.price = price;
         this.createdAt = LocalDateTime.now();
+        this.fee = 0.0;
+        this.tax = 0.0;
+        this.feeRate = 0.0;
+        this.taxRate = 0.0;
+    }
+
+    /**
+     * Constructor with fee rate included.
+     * 
+     * @param tradingPair the trading pair (e.g., "BTC-USD")
+     * @param type the order type (MARKET or LIMIT)
+     * @param amount the amount of cryptocurrency to buy or sell
+     * @param price the price per unit (for LIMIT orders)
+     * @param feeRate the fee rate to apply (e.g., 0.001 for 0.1%)
+     * @param taxRate the tax rate to apply
+     */
+    public Order(String tradingPair, OrderType type, double amount, double price, double feeRate, double taxRate) {
+        this.tradingPair = tradingPair;
+        this.type = type;
+        this.amount = amount;
+        this.price = price;
+        this.createdAt = LocalDateTime.now();
+        this.feeRate = feeRate;
+        this.taxRate = taxRate;
+        this.fee = calculateFee();
+        this.tax = calculateTax();
     }
 
     /**
@@ -61,6 +96,10 @@ public class Order {
         this.createdAt = createdAt;
         this.status = status;
         this.exchange = exchange;
+        this.fee = 0.0;
+        this.tax = 0.0;
+        this.feeRate = 0.0;
+        this.taxRate = 0.0;
     }
 
     /**
@@ -229,6 +268,120 @@ public class Order {
     public void setTotalValue(Double totalValue) {
         this.totalValue = totalValue;
     }
+    
+    /**
+     * Get the fee for this order.
+     * 
+     * @return the fee amount
+     */
+    public double getFee() {
+        return fee;
+    }
+    
+    /**
+     * Set the fee for this order.
+     * 
+     * @param fee the fee to set
+     */
+    public void setFee(double fee) {
+        this.fee = fee;
+    }
+    
+    /**
+     * Get the tax for this order.
+     * 
+     * @return the tax amount
+     */
+    public double getTax() {
+        return tax;
+    }
+    
+    /**
+     * Set the tax for this order.
+     * 
+     * @param tax the tax to set
+     */
+    public void setTax(double tax) {
+        this.tax = tax;
+    }
+    
+    /**
+     * Get the fee rate for this order.
+     * 
+     * @return the fee rate (e.g., 0.001 for 0.1%)
+     */
+    public double getFeeRate() {
+        return feeRate;
+    }
+    
+    /**
+     * Set the fee rate for this order.
+     * 
+     * @param feeRate the fee rate to set
+     */
+    public void setFeeRate(double feeRate) {
+        this.feeRate = feeRate;
+        this.fee = calculateFee(); // Recalculate fee based on the new rate
+    }
+    
+    /**
+     * Get the tax rate for this order.
+     * 
+     * @return the tax rate
+     */
+    public double getTaxRate() {
+        return taxRate;
+    }
+    
+    /**
+     * Set the tax rate for this order.
+     * 
+     * @param taxRate the tax rate to set
+     */
+    public void setTaxRate(double taxRate) {
+        this.taxRate = taxRate;
+        this.tax = calculateTax(); // Recalculate tax based on the new rate
+    }
+    
+    /**
+     * Calculate the fee for this order based on the fee rate.
+     * 
+     * @return the calculated fee
+     */
+    public double calculateFee() {
+        return amount * price * feeRate;
+    }
+    
+    /**
+     * Calculate the tax for this order based on the tax rate.
+     * This is a simplified calculation and may not reflect actual tax liabilities.
+     * 
+     * @return the calculated tax
+     */
+    public double calculateTax() {
+        // Simplified tax calculation - in reality tax would depend on gain/loss
+        // which requires knowing the cost basis
+        return amount * price * taxRate;
+    }
+    
+    /**
+     * Get the total order value including fees.
+     * 
+     * @return the total order value
+     */
+    public double getTotalOrderValue() {
+        double baseValue = amount * price;
+        return type == OrderType.BUY ? baseValue + fee : baseValue - fee;
+    }
+    
+    /**
+     * Get the total cost including fees and taxes.
+     * 
+     * @return the total cost
+     */
+    public double getTotalCost() {
+        return getTotalOrderValue() + tax;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -237,6 +390,10 @@ public class Order {
         Order order = (Order) o;
         return Double.compare(order.amount, amount) == 0 &&
                 Double.compare(order.price, price) == 0 &&
+                Double.compare(order.fee, fee) == 0 &&
+                Double.compare(order.tax, tax) == 0 &&
+                Double.compare(order.feeRate, feeRate) == 0 &&
+                Double.compare(order.taxRate, taxRate) == 0 &&
                 Objects.equals(id, order.id) &&
                 Objects.equals(tradingPair, order.tradingPair) &&
                 type == order.type &&
@@ -248,7 +405,8 @@ public class Order {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, tradingPair, type, amount, price, createdAt, status, exchange, totalValue);
+        return Objects.hash(id, tradingPair, type, amount, price, createdAt, status, exchange, totalValue, 
+                           fee, tax, feeRate, taxRate);
     }
 
     @Override
@@ -263,6 +421,10 @@ public class Order {
                 ", status='" + status + '\'' +
                 ", exchange='" + exchange + '\'' +
                 ", totalValue=" + totalValue +
+                ", fee=" + fee +
+                ", tax=" + tax +
+                ", feeRate=" + feeRate +
+                ", taxRate=" + taxRate +
                 '}';
     }
 }
