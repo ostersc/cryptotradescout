@@ -81,15 +81,24 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
     @Override
     public void initialize(Map<String, Object> parameters) {
         if (parameters.containsKey("minProfitPercentage")) {
-            this.minProfitPercentage = (double) parameters.get("minProfitPercentage");
+            Object value = parameters.get("minProfitPercentage");
+            if (value instanceof Number) {
+                this.minProfitPercentage = ((Number) value).doubleValue();
+            }
         }
         
         if (parameters.containsKey("tradeAmount")) {
-            this.tradeAmount = (double) parameters.get("tradeAmount");
+            Object value = parameters.get("tradeAmount");
+            if (value instanceof Number) {
+                this.tradeAmount = ((Number) value).doubleValue();
+            }
         }
         
         if (parameters.containsKey("maxSlippage")) {
-            this.maxSlippage = (double) parameters.get("maxSlippage");
+            Object value = parameters.get("maxSlippage");
+            if (value instanceof Number) {
+                this.maxSlippage = ((Number) value).doubleValue();
+            }
         }
         
         // Clear existing market data
@@ -351,41 +360,116 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
     public boolean validateParameters(Map<String, Object> parameters) {
         // Check that required parameters exist and are of the correct type
         if (parameters.containsKey("minProfitPercentage")) {
-            if (!(parameters.get("minProfitPercentage") instanceof Number)) {
-                logger.error("minProfitPercentage must be a number");
-                return false;
-            }
-            
-            double minProfit = ((Number) parameters.get("minProfitPercentage")).doubleValue();
-            if (minProfit < 0) {
-                logger.error("minProfitPercentage must be non-negative");
-                return false;
+            Object value = parameters.get("minProfitPercentage");
+            if (!(value instanceof Number)) {
+                // Try to convert from string if possible
+                if (value instanceof String) {
+                    try {
+                        Double.parseDouble((String) value);
+                        // If we get here, it's a valid number string
+                    } catch (NumberFormatException e) {
+                        logger.error("minProfitPercentage must be a number, got: {}", value);
+                        return false;
+                    }
+                } else {
+                    logger.error("minProfitPercentage must be a number");
+                    return false;
+                }
+            } else {
+                double minProfit = ((Number) value).doubleValue();
+                if (minProfit < 0) {
+                    logger.error("minProfitPercentage must be non-negative");
+                    return false;
+                }
             }
         }
         
         if (parameters.containsKey("tradeAmount")) {
-            if (!(parameters.get("tradeAmount") instanceof Number)) {
-                logger.error("tradeAmount must be a number");
-                return false;
-            }
-            
-            double tradeAmount = ((Number) parameters.get("tradeAmount")).doubleValue();
-            if (tradeAmount <= 0) {
-                logger.error("tradeAmount must be positive");
-                return false;
+            Object value = parameters.get("tradeAmount");
+            if (!(value instanceof Number)) {
+                // Try to convert from string if possible
+                if (value instanceof String) {
+                    try {
+                        Double.parseDouble((String) value);
+                        // If we get here, it's a valid number string
+                    } catch (NumberFormatException e) {
+                        logger.error("tradeAmount must be a number, got: {}", value);
+                        return false;
+                    }
+                } else {
+                    logger.error("tradeAmount must be a number");
+                    return false;
+                }
+            } else {
+                double tradeAmount = ((Number) value).doubleValue();
+                if (tradeAmount <= 0) {
+                    logger.error("tradeAmount must be positive");
+                    return false;
+                }
             }
         }
         
         if (parameters.containsKey("maxSlippage")) {
-            if (!(parameters.get("maxSlippage") instanceof Number)) {
-                logger.error("maxSlippage must be a number");
-                return false;
+            Object value = parameters.get("maxSlippage");
+            if (!(value instanceof Number)) {
+                // Try to convert from string if possible
+                if (value instanceof String) {
+                    try {
+                        Double.parseDouble((String) value);
+                        // If we get here, it's a valid number string
+                    } catch (NumberFormatException e) {
+                        logger.error("maxSlippage must be a number, got: {}", value);
+                        return false;
+                    }
+                } else {
+                    logger.error("maxSlippage must be a number");
+                    return false;
+                }
+            } else {
+                double maxSlippage = ((Number) value).doubleValue();
+                if (maxSlippage < 0) {
+                    logger.error("maxSlippage must be non-negative");
+                    return false;
+                }
             }
-            
-            double maxSlippage = ((Number) parameters.get("maxSlippage")).doubleValue();
-            if (maxSlippage < 0) {
-                logger.error("maxSlippage must be non-negative");
-                return false;
+        }
+        
+        // Check fee rate and tax rate if provided
+        if (parameters.containsKey("feeRate")) {
+            Object value = parameters.get("feeRate");
+            if (!(value instanceof Number)) {
+                // Try to convert from string if possible
+                if (value instanceof String) {
+                    try {
+                        Double.parseDouble((String) value);
+                        // If we get here, it's a valid number string
+                    } catch (NumberFormatException e) {
+                        logger.error("feeRate must be a number, got: {}", value);
+                        return false;
+                    }
+                } else {
+                    logger.error("feeRate must be a number");
+                    return false;
+                }
+            }
+        }
+        
+        if (parameters.containsKey("taxRate")) {
+            Object value = parameters.get("taxRate");
+            if (!(value instanceof Number)) {
+                // Try to convert from string if possible
+                if (value instanceof String) {
+                    try {
+                        Double.parseDouble((String) value);
+                        // If we get here, it's a valid number string
+                    } catch (NumberFormatException e) {
+                        logger.error("taxRate must be a number, got: {}", value);
+                        return false;
+                    }
+                } else {
+                    logger.error("taxRate must be a number");
+                    return false;
+                }
             }
         }
         
