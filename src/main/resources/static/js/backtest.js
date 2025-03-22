@@ -31,12 +31,79 @@ function initializeBacktestForm() {
         // Add event listener for form submission
         backtestForm.addEventListener('submit', runBacktest);
         
+        // Load algorithms to populate the dropdown
+        loadAlgorithmsForBacktest();
+        
         // Load initial algorithm parameters
         if (backtestAlgorithm.value) {
             loadAlgorithmParameters();
         }
     } catch (error) {
         console.error('Error initializing backtest form:', error);
+    }
+}
+
+/**
+ * Loads the algorithms for the backtest dropdown
+ */
+function loadAlgorithmsForBacktest() {
+    try {
+        fetch('/api/algorithms')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(algorithms => {
+                if (Array.isArray(algorithms)) {
+                    populateAlgorithmDropdowns(algorithms);
+                } else {
+                    console.error('Invalid algorithms data format:', algorithms);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching algorithms:', error);
+                // Fallback to default algorithms
+                const defaultAlgorithms = [
+                    { id: 'simple-moving-average', name: 'Simple Moving Average Crossover' },
+                    { id: 'arbitrage', name: 'Exchange Arbitrage' }
+                ];
+                populateAlgorithmDropdowns(defaultAlgorithms);
+            });
+    } catch (error) {
+        console.error('Error loading algorithms for backtest:', error);
+    }
+}
+
+/**
+ * Populates the algorithm dropdown selectors
+ * 
+ * @param {Array} algorithms - Array of algorithm objects
+ */
+function populateAlgorithmDropdowns(algorithms) {
+    try {
+        const backtestAlgorithm = document.getElementById('backtest-algorithm');
+        
+        if (!backtestAlgorithm) {
+            console.error('Algorithm selector not found');
+            return;
+        }
+        
+        // Clear existing options (except the default/empty one)
+        while (backtestAlgorithm.options.length > 1) {
+            backtestAlgorithm.remove(1);
+        }
+        
+        // Add new options
+        algorithms.forEach(algorithm => {
+            const option = document.createElement('option');
+            option.value = algorithm.id;
+            option.textContent = algorithm.name;
+            backtestAlgorithm.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error populating algorithm dropdowns:', error);
     }
 }
 
