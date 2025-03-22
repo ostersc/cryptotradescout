@@ -175,22 +175,28 @@ public class BacktestService {
             if (orderStatus.equals("FILLED")) {
                 if (isMatchingPair(order.getTradingPair(), historicalData.get(0).getTradingPair())) {
                     // Adjust for transaction fees (approximately 0.1-0.25% per trade)
-                    double fee = orderValue * 0.002; // 0.2% fee
+                    double fee = orderValue * order.getFeeRate(); 
+                    order.setFee(fee);
 
-                    TaxCalculator tc = new TaxCalculator();
-                    if (order.getType().toString().contains("BUY")) {
+                    if (order.getType() == OrderType.BUY) {
                         // Buying crypto
                         currentCapital -= (orderValue + fee);
                         currentCryptoHoldings += order.getAmount();
-                        tc.addPurchase(order.getAmount(), order.getPrice(), order.getCreatedAt());
+                        taxCalculator.addPurchase(order.getAmount(), order.getPrice(), order.getCreatedAt());
                     } else {
                         // Selling crypto
-                        TaxResult taxResult = tc.calculateTax(order.getAmount(), order.getPrice(), order.getCreatedAt());
+                        TaxResult taxResult = taxCalculator.calculateTax(order.getAmount(), order.getPrice(), order.getCreatedAt());
                         currentCapital += (orderValue - fee);
                         currentCryptoHoldings -= order.getAmount();
+                        
+                        // Update order with tax information
                         order.setTaxableGain(taxResult.getTotalGain());
                         order.setShortTermGain(taxResult.getShortTermGain());
                         order.setLongTermGain(taxResult.getLongTermGain());
+                        
+                        // Only apply tax on positive gains
+                        double taxableAmount = Math.max(0, taxResult.getTotalGain());
+                        order.setTax(taxableAmount * order.getTaxRate());
                     }
 
                     // Calculate current portfolio value
