@@ -638,34 +638,55 @@ function displayBacktestResults(results) {
         let cryptoHoldings = 0;
         let lastPrice = 0;
         
-        // Track crypto holdings throughout the orders
+        // For proper portfolio calculation, we need to track:
+        // 1. Available cash capital 
+        // 2. Crypto holdings and their current market value
+        
+        // Reset tracking variables
+        let availableCash = initialCapital;
+        let cryptoHoldings = 0;
+        let lastPrice = 0;
+        
+        // Process all trades to accurately track cash and crypto positions
         if (results.generatedOrders && results.generatedOrders.length > 0) {
-            // Find the last order to get the final cash value
-            const lastOrder = results.generatedOrders[results.generatedOrders.length - 1];
-            // The totalValue in the last order is the current cash value (without crypto)
-            finalCapital = lastOrder.totalValue || finalCapital;
-            lastPrice = lastOrder.price; // Save the last known price
+            console.log(`Starting portfolio tracking: Initial capital = $${initialCapital}`);
             
-            // Count current crypto holdings
+            // Process each order to update cash and crypto positions
             for (const order of results.generatedOrders) {
+                lastPrice = order.price; // Update price with each order
+                
                 if (order.type === 'BUY') {
+                    // When buying, subtract the full purchase cost (including fees) from cash
+                    const purchaseCost = (order.amount * order.price) + (order.feeAmount || order.fee || 0);
+                    availableCash -= purchaseCost;
                     cryptoHoldings += order.amount;
+                    
+                    console.log(`BUY: ${order.amount} @ $${order.price} = $${order.amount * order.price} + $${order.feeAmount || order.fee || 0} fee`);
+                    console.log(`Portfolio after BUY: Cash $${availableCash}, Crypto ${cryptoHoldings} units worth $${cryptoHoldings * order.price}`);
+                    
                 } else if (order.type === 'SELL') {
+                    // When selling, add proceeds (minus fees and tax) to cash
+                    const saleProceeds = (order.amount * order.price) - (order.feeAmount || order.fee || 0);
+                    // Tax doesn't impact available cash directly, it's just a future liability
+                    availableCash += saleProceeds;
                     cryptoHoldings -= order.amount;
+                    
+                    console.log(`SELL: ${order.amount} @ $${order.price} = $${order.amount * order.price} - $${order.feeAmount || order.fee || 0} fee`);
+                    console.log(`Portfolio after SELL: Cash $${availableCash}, Crypto ${cryptoHoldings} units worth $${cryptoHoldings * order.price}`);
                 }
             }
             
-            // If there are remaining crypto holdings, add their value to the final capital
-            // This correctly accounts for the crypto assets in our portfolio
-            if (cryptoHoldings > 0 && lastPrice > 0) {
-                console.log(`Adding crypto holdings to final capital: ${cryptoHoldings} units at ${lastPrice} = ${cryptoHoldings * lastPrice}`);
-                // We DO NOT need to check if the last order was a SELL
-                // The totalValue from the last order is our current cash
-                // We just add the current value of any crypto holdings
-                const cryptoValue = cryptoHoldings * lastPrice;
-                finalCapital += cryptoValue;
-                console.log(`Final capital calculation: Cash ${lastOrder.totalValue} + Crypto value ${cryptoValue} = ${finalCapital}`);
-            }
+            // Calculate final portfolio value: cash + crypto holdings at last known price
+            let cryptoValue = cryptoHoldings * lastPrice;
+            finalCapital = availableCash + cryptoValue;
+            
+            // Detailed logging of final portfolio value calculation
+            console.log('--------- FINAL PORTFOLIO CALCULATION ---------');
+            console.log(`Cash: $${availableCash.toFixed(2)}`);
+            console.log(`Crypto: ${cryptoHoldings} units @ $${lastPrice} = $${cryptoValue.toFixed(2)}`);
+            console.log(`Total portfolio value: $${finalCapital.toFixed(2)}`);
+            console.log(`Initial capital: $${initialCapital.toFixed(2)}`);
+            console.log(`Return: ${((finalCapital / initialCapital - 1) * 100).toFixed(2)}%`);
         }
         
         const profit = finalCapital - initialCapital;
@@ -727,38 +748,40 @@ function drawEquityChart(results) {
         // Prepare data for the chart
         const orders = results.generatedOrders || [];
         const equityData = [];
-        let runningCapital = results.initialCapital || 10000;
+        const initialCapital = results.initialCapital || 10000;
+        
+        // Initialize tracking variables
+        let availableCash = initialCapital;
         let cryptoHoldings = 0;
         let lastPrice = 0;
         
         // Add initial point
         equityData.push({
             date: new Date(results.startTime || new Date().toISOString()),
-            equity: runningCapital
+            equity: initialCapital
         });
         
-        // Add a point for each order
+        // Process each order and calculate portfolio value at each point
         orders.forEach(order => {
+            lastPrice = order.price;
+            
             if (order.type === 'BUY') {
+                // When buying, subtract purchase cost from cash and add crypto
+                const purchaseCost = (order.amount * order.price) + (order.feeAmount || order.fee || 0);
+                availableCash -= purchaseCost;
                 cryptoHoldings += order.amount;
             } else if (order.type === 'SELL') {
+                // When selling, add proceeds to cash and reduce crypto
+                const saleProceeds = (order.amount * order.price) - (order.feeAmount || order.fee || 0);
+                availableCash += saleProceeds;
                 cryptoHoldings -= order.amount;
             }
             
-            lastPrice = order.price;
+            // Calculate total portfolio value (cash + crypto holdings)
+            const cryptoValue = cryptoHoldings * lastPrice;
+            const totalEquity = availableCash + cryptoValue;
             
-            // Use totalValue if provided, otherwise calculate it
-            if (order.totalValue) {
-                runningCapital = order.totalValue;
-            }
-            
-            // For any crypto holdings, add their value to the equity
-            let totalEquity = runningCapital;
-            if (cryptoHoldings > 0 && lastPrice > 0) {
-                // Just add the current crypto value
-                const cryptoValue = cryptoHoldings * lastPrice;
-                totalEquity += cryptoValue;
-            }
+            console.log(`Equity chart - After ${order.type}: Cash $${availableCash.toFixed(2)}, Crypto ${cryptoHoldings} ($${cryptoValue.toFixed(2)}), Total $${totalEquity.toFixed(2)}`);
             
             equityData.push({
                 date: new Date(order.createdAt || new Date().toISOString()),
@@ -880,28 +903,48 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
             });
         }
         
-        // Calculate drawdown
+        // Calculate drawdown using proper portfolio accounting
         let maxDrawdown = 0;
         let maxEquity = initialCapital;
         let currentDrawdown = 0;
         
         if (orders.length > 0) {
-            let runningEquity = initialCapital;
+            // Initialize portfolio tracking
+            let availableCash = initialCapital;
+            let cryptoHoldings = 0;
+            let lastPrice = 0;
             
             orders.forEach(order => {
-                if (order.totalValue) {
-                    runningEquity = order.totalValue;
-                    
-                    if (runningEquity > maxEquity) {
-                        maxEquity = runningEquity;
-                        currentDrawdown = 0;
-                    } else {
-                        currentDrawdown = (maxEquity - runningEquity) / maxEquity * 100;
-                        if (currentDrawdown > maxDrawdown) {
-                            maxDrawdown = currentDrawdown;
-                        }
+                lastPrice = order.price;
+                
+                if (order.type === 'BUY') {
+                    // Update cash and crypto holdings
+                    const purchaseCost = (order.amount * order.price) + (order.feeAmount || order.fee || 0);
+                    availableCash -= purchaseCost;
+                    cryptoHoldings += order.amount;
+                } else if (order.type === 'SELL') {
+                    // Update cash and crypto holdings
+                    const saleProceeds = (order.amount * order.price) - (order.feeAmount || order.fee || 0);
+                    availableCash += saleProceeds;
+                    cryptoHoldings -= order.amount;
+                }
+                
+                // Calculate total portfolio value
+                const cryptoValue = cryptoHoldings * lastPrice;
+                const portfolioValue = availableCash + cryptoValue;
+                
+                // Update maximum drawdown
+                if (portfolioValue > maxEquity) {
+                    maxEquity = portfolioValue;
+                    currentDrawdown = 0;
+                } else {
+                    currentDrawdown = (maxEquity - portfolioValue) / maxEquity * 100;
+                    if (currentDrawdown > maxDrawdown) {
+                        maxDrawdown = currentDrawdown;
                     }
                 }
+                
+                console.log(`Drawdown calculation - Portfolio: $${portfolioValue.toFixed(2)}, Max: $${maxEquity.toFixed(2)}, Current drawdown: ${currentDrawdown.toFixed(2)}%, Max drawdown: ${maxDrawdown.toFixed(2)}%`);
             });
         }
         
