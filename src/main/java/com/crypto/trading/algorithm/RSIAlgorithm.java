@@ -47,6 +47,9 @@ public class RSIAlgorithm implements TradingAlgorithm {
     private Double currentRSI = null;
     private double lastPrice = 0.0;
     
+    // Track cumulative gain/loss for proper tax treatment
+    private double liveCumulativeCapitalGainLoss = 0.0;
+    
     /**
      * Initialize the algorithm with configuration parameters.
      * 
@@ -139,14 +142,46 @@ public class RSIAlgorithm implements TradingAlgorithm {
             
             // Sell signal: RSI crosses below overbought threshold from above
             if (previousRSI > overboughtThreshold && currentRSI <= overboughtThreshold) {
+                double amount = calculatePositionSize(currentPrice);
+                
+                // For live trading, we'd need to look up the cost basis from a service
+                // that tracks all buy orders. This is simplified for the demo.
+                double costBasisPrice = currentPrice * 0.95; // Simplified - assume 5% price movement
+                double revenue = amount * currentPrice;
+                double sellFee = revenue * feeRate;
+                
+                // Calculate total cost basis (what you paid for the crypto originally)
+                double totalCostBasis = amount * costBasisPrice;
+                double buyFee = totalCostBasis * feeRate;
+                double totalBuyCost = totalCostBasis + buyFee;
+                
+                // Calculate the gain (or loss) - this is revenue minus what you paid
+                double gain = revenue - totalCostBasis;
+                
+                // Calculate the net gain after fees
+                double netGain = gain - sellFee - buyFee;
+                
+                // Add this gain/loss to our cumulative running total for live trading
+                liveCumulativeCapitalGainLoss += netGain;
+                
+                // Tax is only applied to the cumulative gain, not individual trades
+                // If cumulative is negative, there's no tax liability (it's a capital loss credit)
+                double tax = 0.0;
+                if (liveCumulativeCapitalGainLoss > 0) {
+                    // Only apply tax to positive cumulative gains
+                    tax = liveCumulativeCapitalGainLoss * taxRate;
+                }
+                
                 Order sellOrder = new Order(
                         marketData.getTradingPair(),
                         OrderType.SELL,
-                        calculatePositionSize(currentPrice),
+                        amount,
                         currentPrice,
                         feeRate,
                         taxRate
                 );
+                sellOrder.setTaxableGain(netGain);
+                sellOrder.setEstimatedTaxLiability(tax);
                 return Mono.just(sellOrder);
             }
         }
@@ -175,6 +210,7 @@ public class RSIAlgorithm implements TradingAlgorithm {
         double availableCapital = initialCapital;
         double cryptoHoldings = 0.0;
         boolean inPosition = false;
+        double cumulativeCapitalGainLoss = 0.0; // Track cumulative gain/loss for tax purposes
         
         // Sort historical data by timestamp (oldest first)
         List<MarketData> sortedData = historicalData.stream()
@@ -228,9 +264,42 @@ public class RSIAlgorithm implements TradingAlgorithm {
                 if (cryptoHoldings > 0) {
                     double amount = cryptoHoldings;
                     double revenue = amount * price;
-                    double fee = revenue * feeRate;
-                    double profit = revenue - fee - (amount * lastPrice * (1 + feeRate)); // Profit after fees
-                    double tax = Math.max(0, profit * taxRate); // Only tax positive profits
+                    double sellFee = revenue * feeRate;
+                    
+                    // Get the cost basis price from the last buy order
+                    double costBasisPrice = 0.0;
+                    for (Order previousOrder : orders) {
+                        if (previousOrder.getType() == OrderType.BUY) {
+                            costBasisPrice = previousOrder.getPrice();
+                        }
+                    }
+                    
+                    // If we can't find a previous buy order, fallback to the last price
+                    if (costBasisPrice == 0.0) {
+                        costBasisPrice = lastPrice;
+                    }
+                    
+                    // Calculate total cost basis (what you paid for the crypto originally)
+                    double totalCostBasis = amount * costBasisPrice;
+                    double buyFee = totalCostBasis * feeRate;
+                    double totalBuyCost = totalCostBasis + buyFee;
+                    
+                    // Calculate the gain (or loss) - this is revenue minus what you paid
+                    double gain = revenue - totalCostBasis;
+                    
+                    // Calculate the net gain after fees
+                    double netGain = gain - sellFee - buyFee;
+                    
+                    // Add this gain/loss to our cumulative running total
+                    cumulativeCapitalGainLoss += netGain;
+                    
+                    // Tax is only applied to the cumulative gain, not individual trades
+                    // If cumulative is negative, there's no tax liability (it's a capital loss)
+                    double tax = 0.0;
+                    if (cumulativeCapitalGainLoss > 0) {
+                        // Only apply tax to positive cumulative gains
+                        tax = cumulativeCapitalGainLoss * taxRate;
+                    }
                     
                     Order sellOrder = new Order(
                             data.getTradingPair(),
@@ -245,7 +314,7 @@ public class RSIAlgorithm implements TradingAlgorithm {
                     sellOrder.setExchange(data.getExchange());
                     
                     // Update portfolio
-                    availableCapital += (revenue - fee - tax);
+                    availableCapital += (revenue - sellFee - tax);
                     cryptoHoldings = 0;
                     inPosition = false;
                     

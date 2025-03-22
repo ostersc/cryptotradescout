@@ -31,6 +31,9 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
     private boolean lastCrossover = false; // false = below, true = above
     private double lastBuyPrice = 0; // Track the average price at which we bought
     
+    // Track cumulative gain/loss for proper tax treatment
+    private double liveCumulativeCapitalGainLoss = 0.0;
+    
     /**
      * Get the unique identifier for this algorithm.
      */
