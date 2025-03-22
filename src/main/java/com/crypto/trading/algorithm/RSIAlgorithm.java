@@ -163,14 +163,14 @@ public class RSIAlgorithm implements TradingAlgorithm {
                 double netGain = gain - sellFee - buyFee;
                 
                 // Add this gain/loss to our cumulative running total for live trading
-                liveCumulativeCapitalGainLoss += netGain;
+                this.liveCumulativeCapitalGainLoss += netGain;
                 
                 // Tax is only applied to the cumulative gain, not individual trades
                 // If cumulative is negative, there's no tax liability (it's a capital loss credit)
                 double tax = 0.0;
-                if (liveCumulativeCapitalGainLoss > 0) {
+                if (this.liveCumulativeCapitalGainLoss > 0) {
                     // Only apply tax to positive cumulative gains
-                    tax = liveCumulativeCapitalGainLoss * taxRate;
+                    tax = this.liveCumulativeCapitalGainLoss * taxRate;
                 }
                 
                 Order sellOrder = new Order(
