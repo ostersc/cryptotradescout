@@ -238,6 +238,14 @@ function initializePriceChart() {
             return;
         }
         
+        // Define a reasonable starting y-axis range for BTC price (around $84,000 currently)
+        const basePrice = 84000;
+        const initialMinPrice = basePrice * 0.99; // 1% below base price
+        const initialMaxPrice = basePrice * 1.01; // 1% above base price
+        
+        // Explicitly get browser timezone
+        const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
         priceChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -271,7 +279,12 @@ function initializePriceChart() {
                     x: {
                         title: {
                             display: true,
-                            text: 'Time'
+                            text: 'Time (Local Timezone)'
+                        },
+                        adapters: {
+                            date: {
+                                timezone: browserTimeZone // Ensure consistent timezone display
+                            }
                         }
                     },
                     y: {
@@ -284,9 +297,9 @@ function initializePriceChart() {
                                 return formatCurrency(value);
                             }
                         },
-                        // Setting a minimum range for the y-axis to avoid tiny variations appearing dramatic
-                        grace: '5%', // Add 5% padding on both ends
-                        // We'll manage min/max dynamically in update function
+                        min: initialMinPrice,  // Start with a reasonable range
+                        max: initialMaxPrice,  // Will be adjusted as data comes in
+                        // Remove grace to have more precise control
                     }
                 }
             }
@@ -413,7 +426,14 @@ function updateMarketDataDisplay(data) {
     // Update last update time
     lastUpdateTime = new Date();
     if (lastUpdateElement) {
-        lastUpdateElement.textContent = lastUpdateTime.toLocaleTimeString();
+        const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        lastUpdateElement.textContent = lastUpdateTime.toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZone: browserTimeZone
+        });
     }
     
     // Flash the update indicator
@@ -432,12 +452,14 @@ function updatePriceChart(data) {
     }
     
     try {
-        // Add new data point to chart
-        const timestamp = new Date(data.timestamp).toLocaleTimeString(undefined, {
+        // Add new data point to chart with browser timezone formatting
+        const timestampDate = new Date(data.timestamp);
+        const timestamp = timestampDate.toLocaleTimeString(undefined, {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            hour12: false // 24-hour time format
+            hour12: false, // 24-hour time format
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // Explicitly use browser timezone
         });
         
         priceChart.data.labels.push(timestamp);
@@ -450,30 +472,35 @@ function updatePriceChart(data) {
         }
         
         // Dynamically calculate min/max for better y-axis scaling
-        if (priceChart.data.datasets[0].data.length > 1) {
+        // Always enforce a reasonable y-axis range with each update
+        if (priceChart.data.datasets[0].data.length > 0) {
             const prices = priceChart.data.datasets[0].data;
+            
+            // Determine min and max values in the data
             const min = Math.min(...prices);
             const max = Math.max(...prices);
             
-            // Ensure there's at least a 1% range even if the price is stable
-            const rangeNeeded = Math.max(max * 0.01, 500); // At least 1% or $500 for BTC
+            // Create a substantial buffer (about 1% of the price)
+            const buffer = max * 0.01;
             
-            // Only update Y axis if the range isn't sufficient or if it's too large
-            if (priceChart.options.scales.y.min === undefined || 
-                priceChart.options.scales.y.max === undefined ||
-                priceChart.options.scales.y.min > min * 0.995 ||
-                priceChart.options.scales.y.max < max * 1.005) {
-                
-                priceChart.options.scales.y.min = min * 0.995;  // 0.5% buffer below
-                priceChart.options.scales.y.max = max * 1.005;  // 0.5% buffer above
-                
-                // Ensure minimum range
-                if (priceChart.options.scales.y.max - priceChart.options.scales.y.min < rangeNeeded) {
-                    const middle = (priceChart.options.scales.y.max + priceChart.options.scales.y.min) / 2;
-                    priceChart.options.scales.y.min = middle - (rangeNeeded / 2);
-                    priceChart.options.scales.y.max = middle + (rangeNeeded / 2);
-                }
+            // Enforce a minimum range of at least 1% of the price or $500, whichever is greater
+            const minRange = Math.max(max * 0.01, 500);
+            
+            // Calculate initial min/max with buffer
+            let newMin = min - buffer;
+            let newMax = max + buffer;
+            
+            // Ensure the range is at least minRange
+            const currentRange = newMax - newMin;
+            if (currentRange < minRange) {
+                const middle = (newMax + newMin) / 2;
+                newMin = middle - (minRange / 2);
+                newMax = middle + (minRange / 2);
             }
+            
+            // Always update the y-axis scale to maintain a consistent, readable range
+            priceChart.options.scales.y.min = newMin;
+            priceChart.options.scales.y.max = newMax;
         }
         
         // Update chart
@@ -700,7 +727,10 @@ function formatTimestamp(timestamp) {
     if (!timestamp) return '-';
     
     const date = new Date(timestamp);
-    // Using toLocaleString with appropriate options ensures browser's timezone is used
+    // Explicitly specify the browser's timezone for consistent display
+    const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Using toLocaleString with appropriate options and explicit timezone
     return date.toLocaleString(undefined, {
         year: 'numeric',
         month: 'numeric',
@@ -709,6 +739,7 @@ function formatTimestamp(timestamp) {
         minute: '2-digit',
         second: '2-digit',
         hour12: false, // Use 24-hour format
+        timeZone: browserTimeZone, // Explicitly use browser timezone
         timeZoneName: 'short' // Show timezone abbreviation
     });
 }
