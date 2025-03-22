@@ -813,8 +813,16 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
         
         if (orders.length > 0) {
             orders.forEach(order => {
-                totalFees += (order.fee || 0);
-                totalTaxes += (order.tax || 0);
+                totalFees += (order.feeAmount || order.fee || 0);
+                
+                // Only count positive tax values
+                let taxAmount = 0;
+                if (typeof order.estimatedTaxLiability !== 'undefined' && order.estimatedTaxLiability > 0) {
+                    taxAmount = order.estimatedTaxLiability;
+                } else if (typeof order.tax !== 'undefined' && order.tax > 0) {
+                    taxAmount = order.tax;
+                }
+                totalTaxes += taxAmount;
             });
         }
         
@@ -929,8 +937,21 @@ function displayTradeStatistics(orders) {
         });
         
         // Calculate average fee and tax per trade
-        const totalFees = orders.reduce((sum, order) => sum + (order.fee || 0), 0);
-        const totalTaxes = orders.reduce((sum, order) => sum + (order.tax || 0), 0);
+        const totalFees = orders.reduce((sum, order) => sum + (order.feeAmount || order.fee || 0), 0);
+        
+        // Calculate total taxes properly from estimatedTaxLiability or tax field, only counting positive values
+        const totalTaxes = orders.reduce((sum, order) => {
+            let taxAmount = 0;
+            
+            if (typeof order.estimatedTaxLiability !== 'undefined' && order.estimatedTaxLiability > 0) {
+                taxAmount = order.estimatedTaxLiability;
+            } else if (typeof order.tax !== 'undefined' && order.tax > 0) {
+                taxAmount = order.tax;
+            }
+            
+            return sum + taxAmount;
+        }, 0);
+        
         const averageFeePerTrade = totalFees / totalTrades;
         const averageTaxPerTrade = totalTaxes / totalTrades;
         
@@ -1002,11 +1023,21 @@ function displayTrades(orders) {
             const type = order.type || 'Unknown';
             const price = order.price || 0;
             const amount = order.amount || 0;
-            const fee = order.fee || 0;
-            const tax = order.tax || 0;
+            const fee = order.feeAmount || order.fee || 0;
+            
+            // Use estimatedTaxLiability as the primary tax value if available, otherwise try taxableGain or tax
+            let tax = 0;
+            if (typeof order.estimatedTaxLiability !== 'undefined') {
+                tax = order.estimatedTaxLiability;
+            } else if (typeof order.tax !== 'undefined') {
+                tax = order.tax;
+            }
             
             // Highlight buy/sell with different colors
             const typeClass = type.toUpperCase() === 'BUY' ? 'text-success' : 'text-danger';
+            
+            // Only display tax if positive (gains), otherwise show no tax
+            const taxDisplay = tax > 0 ? formatCurrency(tax) : '$0.00';
             
             row.innerHTML = `
                 <td>${createdAt}</td>
@@ -1015,7 +1046,7 @@ function displayTrades(orders) {
                 <td>${amount.toFixed(8)}</td>
                 <td>${formatCurrency(price * amount)}</td>
                 <td>${formatCurrency(fee)}</td>
-                <td>${formatCurrency(tax)}</td>
+                <td>${taxDisplay}</td>
             `;
             
             tradesTable.appendChild(row);
