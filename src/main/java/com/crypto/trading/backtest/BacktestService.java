@@ -303,14 +303,38 @@ public class BacktestService {
         long daysBetween = java.time.Duration.between(startTime, endTime).toDays();
         int numberOfOrders = Math.min(20, Math.max(5, (int)(daysBetween / 3))); // 5-20 orders
 
-        // Base price depends on trading pair
+        // Use recent price data from the exchange service if available
         double basePrice = 0.0;
-        if (tradingPair.toUpperCase().contains("BTC")) {
-            basePrice = 60000.0; // Sample BTC price
-        } else if (tradingPair.toUpperCase().contains("ETH")) {
-            basePrice = 3000.0; // Sample ETH price
-        } else {
-            basePrice = 100.0; // Default price
+        try {
+            // Fetch the current market data from the exchange
+            MarketData currentData = exchangeServices.get(exchange.toLowerCase())
+                    .getCurrentMarketData(tradingPair)
+                    .block();
+            
+            if (currentData != null) {
+                basePrice = currentData.getLastPrice();
+                logger.info("Using current price for {} from {}: {}", tradingPair, exchange, basePrice);
+            } else {
+                // Fallback to reasonable estimates if we can't get current data
+                if (tradingPair.toUpperCase().contains("BTC")) {
+                    basePrice = 84000.0; // Updated BTC price as of March 2025
+                } else if (tradingPair.toUpperCase().contains("ETH")) {
+                    basePrice = 4500.0; // Updated ETH price as of March 2025
+                } else {
+                    basePrice = 100.0; // Default price
+                }
+                logger.info("Using fallback price for {}: {}", tradingPair, basePrice);
+            }
+        } catch (Exception e) {
+            // Fallback to reasonable estimates if we encounter an error
+            if (tradingPair.toUpperCase().contains("BTC")) {
+                basePrice = 84000.0; // Updated BTC price as of March 2025
+            } else if (tradingPair.toUpperCase().contains("ETH")) {
+                basePrice = 4500.0; // Updated ETH price as of March 2025
+            } else {
+                basePrice = 100.0; // Default price
+            }
+            logger.warn("Error fetching current price, using fallback for {}: {}", tradingPair, basePrice);
         }
 
         // Generate orders with some price movement
