@@ -194,6 +194,23 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
             logger.info("Arbitrage opportunity detected: Buy {} on {} at {}, Sell on {} at {}, Profit: {}%",
                     tradingPair, bestBuyExchange, lowestAsk, bestSellExchange, highestBid, profitPercentage);
             
+            // Calculate fees and profits for proper tax treatment
+            double buyAmount = tradeAmount * lowestAsk;
+            double sellAmount = tradeAmount * highestBid;
+            double buyFee = buyAmount * feeRate;
+            double sellFee = sellAmount * feeRate;
+            double grossProfit = sellAmount - buyAmount;
+            double netProfit = grossProfit - buyFee - sellFee;
+            
+            // Add this trade's net profit/loss to our cumulative tracking
+            this.liveCumulativeCapitalGainLoss += netProfit;
+            
+            // Only tax positive cumulative profits
+            double tax = 0.0;
+            if (this.liveCumulativeCapitalGainLoss > 0) {
+                tax = this.liveCumulativeCapitalGainLoss * taxRate;
+            }
+            
             // Create a buy order for the exchange with the lowest asking price
             Order buyOrder = new Order(
                     tradingPair,
@@ -202,9 +219,11 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     lowestAsk
             );
             buyOrder.setExchange(bestBuyExchange);
+            buyOrder.setFeeRate(feeRate);
+            buyOrder.setFeeAmount(buyFee);
             
             // In a real implementation, we would also create and execute a corresponding sell order
-            // on the exchange with the highest bid price
+            // on the exchange with the highest bid price, and properly track the taxable gain
             
             return Mono.just(buyOrder);
         }
@@ -356,6 +375,7 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     sellOrder.setFeeAmount(sellFee);
                     sellOrder.setFeeRate(feeRate);
                     sellOrder.setFeeAsset(tradingPair.split("-")[1]); // Fee in USD for BTC-USD
+                    sellOrder.setTaxableGain(netProfit); // Set the taxable gain/loss for this trade
                     sellOrder.setTaxRate(taxRate);
                     sellOrder.setEstimatedTaxLiability(tax);
                     
