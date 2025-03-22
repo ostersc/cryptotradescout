@@ -1,76 +1,52 @@
 package com.crypto.trading.ai.controller;
 
-import com.crypto.trading.ai.model.MarketAnalysis;
+import com.crypto.trading.ai.model.AIAnalysisResponse;
 import com.crypto.trading.ai.service.AIAdvisorService;
-import com.crypto.trading.exchange.model.MarketData;
-import com.crypto.trading.service.TradingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller for AI-powered trading strategy suggestion API endpoints
+ * Controller for AI-powered trading strategy recommendations.
  */
 @RestController
 @RequestMapping("/api/v1/ai")
 public class AIAdvisorController {
     private static final Logger logger = LoggerFactory.getLogger(AIAdvisorController.class);
     
-    @Autowired
-    private AIAdvisorService aiAdvisorService;
+    private final AIAdvisorService aiAdvisorService;
     
     @Autowired
-    private TradingService tradingService;
-    
-    /**
-     * Get AI-powered trading strategy recommendations for a specific trading pair and exchange
-     *
-     * @param exchange The exchange name
-     * @param tradingPair The trading pair
-     * @return A market analysis with AI recommendations
-     */
-    @GetMapping("/recommendations")
-    public Mono<ResponseEntity<MarketAnalysis>> getRecommendations(
-            @RequestParam String exchange,
-            @RequestParam String tradingPair) {
-        
-        logger.info("Received request for AI recommendations for {}-{}", exchange, tradingPair);
-        
-        return tradingService.getMarketData(exchange, tradingPair)
-                .flatMap(marketData -> aiAdvisorService.generateMarketAnalysis(marketData)
-                        .map(analysis -> {
-                            logger.info("Generated AI recommendations for {}-{}", exchange, tradingPair);
-                            return ResponseEntity.ok(analysis);
-                        }))
-                .onErrorResume(e -> {
-                    logger.error("Error generating AI recommendations", e);
-                    return Mono.just(ResponseEntity.badRequest().build());
-                });
+    public AIAdvisorController(AIAdvisorService aiAdvisorService) {
+        this.aiAdvisorService = aiAdvisorService;
+        logger.info("AIAdvisorController initialized");
     }
     
     /**
-     * Get AI-powered trading strategy recommendations based on provided market data
+     * Get AI-powered trading recommendations for the given market.
      *
-     * @param marketData The market data to analyze
-     * @return A market analysis with AI recommendations
+     * @param exchange The exchange name
+     * @param tradingPair The trading pair
+     * @return AIAnalysisResponse with market analysis and algorithm recommendations
      */
-    @PostMapping("/analyze")
-    public Mono<ResponseEntity<MarketAnalysis>> analyzeMarketData(@RequestBody MarketData marketData) {
-        logger.info("Received request to analyze market data for {}-{}", 
-                marketData.getExchange(), marketData.getTradingPair());
+    @GetMapping("/recommendations")
+    public ResponseEntity<AIAnalysisResponse> getRecommendations(
+            @RequestParam String exchange,
+            @RequestParam String tradingPair) {
         
-        return aiAdvisorService.generateMarketAnalysis(marketData)
-                .map(analysis -> {
-                    logger.info("Generated AI analysis for {}-{}", 
-                            marketData.getExchange(), marketData.getTradingPair());
-                    return ResponseEntity.ok(analysis);
-                })
-                .onErrorResume(e -> {
-                    logger.error("Error analyzing market data", e);
-                    return Mono.just(ResponseEntity.badRequest().build());
-                });
+        logger.info("Received request for AI recommendations for {}/{}", exchange, tradingPair);
+        
+        try {
+            AIAnalysisResponse response = aiAdvisorService.getRecommendations(exchange, tradingPair);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error getting AI recommendations", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
