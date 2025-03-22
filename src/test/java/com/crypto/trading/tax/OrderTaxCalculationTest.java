@@ -142,7 +142,7 @@ public class OrderTaxCalculationTest {
         double longTermGain = (sellPrice - firstBuyPrice) * firstBuyAmount; // (15000 - 8000) * 1 = 7000
         double shortTermGain = (sellPrice - secondBuyPrice) * secondBuyAmount; // (15000 - 18000) * 1 = -3000
         double totalGain = longTermGain + shortTermGain; // 7000 - 3000 = 4000
-        double expectedTax = Math.max(0, (longTermGain * taxRate)); // 7000 * 0.15 = 1050 (only tax on the gain portion)
+        double expectedTax = Math.max(0, totalGain) * taxRate; // 4000 * 0.15 = 600 (tax on the positive net gain)
         
         assertEquals(totalGain, sellOrder.getTaxableGain(), 0.001);
         assertEquals(expectedTax, sellOrder.getTax(), 0.001);
