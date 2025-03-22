@@ -175,4 +175,153 @@ public class BacktestController {
                     return Mono.just(ResponseEntity.badRequest().build());
                 });
     }
+    
+    /**
+     * Alternative endpoint for running a backtest (without the /run suffix).
+     * This is to provide compatibility with different frontend client implementations.
+     * 
+     * @param backtestRequest the backtest parameters
+     * @return a ResponseEntity containing the backtest results
+     */
+    @PostMapping("")
+    public Mono<ResponseEntity<BacktestResult>> runBacktestAlternate(
+            @RequestBody Map<String, Object> backtestRequest) {
+        
+        try {
+            String algorithmId = (String) backtestRequest.get("algorithmId");
+            if (algorithmId == null) {
+                // Try alternate field name
+                algorithmId = (String) backtestRequest.get("algorithm");
+            }
+            
+            String exchange = (String) backtestRequest.get("exchange");
+            String tradingPair = (String) backtestRequest.get("tradingPair");
+            if (tradingPair == null) {
+                // Try alternate field name
+                tradingPair = (String) backtestRequest.get("pair");
+            }
+            
+            // Validate required string parameters
+            if (algorithmId == null || exchange == null || tradingPair == null) {
+                logger.error("Missing required parameters: algorithmId={}, exchange={}, tradingPair={}", 
+                        algorithmId, exchange, tradingPair);
+                return Mono.just(ResponseEntity.badRequest().build());
+            }
+            
+            // Get the algorithm
+            if (!algorithmRegistry.hasAlgorithm(algorithmId)) {
+                logger.error("Algorithm not found: {}", algorithmId);
+                return Mono.just(ResponseEntity.badRequest().build());
+            }
+            
+            TradingAlgorithm algorithm = algorithmRegistry.getAlgorithm(algorithmId);
+            
+            // Parse dates
+            LocalDateTime startTime;
+            LocalDateTime endTime;
+            
+            try {
+                String startTimeStr = (String) backtestRequest.get("startTime");
+                String endTimeStr = (String) backtestRequest.get("endTime");
+                
+                if (startTimeStr == null || endTimeStr == null) {
+                    logger.error("Missing start or end time");
+                    return Mono.just(ResponseEntity.badRequest().build());
+                }
+                
+                // Try to parse in different formats
+                startTime = parseDateTime(startTimeStr);
+                endTime = parseDateTime(endTimeStr);
+                
+                if (startTime == null || endTime == null) {
+                    logger.error("Could not parse dates: startTime={}, endTime={}", startTimeStr, endTimeStr);
+                    return Mono.just(ResponseEntity.badRequest().build());
+                }
+            } catch (Exception e) {
+                logger.error("Error parsing dates", e);
+                return Mono.just(ResponseEntity.badRequest().build());
+            }
+            
+            // Get initial capital
+            double initialCapital = 10000.0; // Default
+            if (backtestRequest.containsKey("initialCapital")) {
+                try {
+                    Object capValue = backtestRequest.get("initialCapital");
+                    if (capValue instanceof Number) {
+                        initialCapital = ((Number) capValue).doubleValue();
+                    } else if (capValue instanceof String) {
+                        initialCapital = Double.parseDouble((String) capValue);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error parsing initialCapital", e);
+                    return Mono.just(ResponseEntity.badRequest().build());
+                }
+            }
+            
+            // Get algorithm parameters
+            @SuppressWarnings("unchecked")
+            Map<String, Object> algorithmParams = 
+                    (Map<String, Object>) backtestRequest.get("algorithmParams");
+            
+            if (algorithmParams == null) {
+                algorithmParams = Map.of(); // Empty map if not provided
+            }
+            
+            // Validate algorithm parameters (but be lenient if they're missing or incompatible)
+            if (!algorithm.validateParameters(algorithmParams)) {
+                logger.warn("Invalid algorithm parameters: {}, using defaults", algorithmParams);
+                algorithmParams = Map.of(); // Use defaults
+            }
+            
+            logger.info("Starting backtest (alternative endpoint) for algorithm {} on {} {} from {} to {}",
+                    algorithmId, exchange, tradingPair, startTime, endTime);
+            
+            // Run the backtest
+            return backtestService.runBacktest(
+                    algorithm, exchange, tradingPair, startTime, endTime, 
+                    initialCapital, algorithmParams)
+                    .map(ResponseEntity::ok)
+                    .defaultIfEmpty(ResponseEntity.notFound().build())
+                    .onErrorResume(e -> {
+                        logger.error("Error running backtest", e);
+                        return Mono.just(ResponseEntity.badRequest().build());
+                    });
+                    
+        } catch (Exception e) {
+            logger.error("Error processing backtest request", e);
+            return Mono.just(ResponseEntity.badRequest().build());
+        }
+    }
+    
+    /**
+     * Helper method to parse a date-time string in various formats.
+     * 
+     * @param dateTimeStr the date-time string
+     * @return the parsed LocalDateTime, or null if parsing failed
+     */
+    private LocalDateTime parseDateTime(String dateTimeStr) {
+        try {
+            // Try direct ISO format parsing (default)
+            return LocalDateTime.parse(dateTimeStr);
+        } catch (Exception e1) {
+            try {
+                // Try adding seconds if missing
+                if (dateTimeStr.length() == 16) { // Missing seconds
+                    return LocalDateTime.parse(dateTimeStr + ":00");
+                }
+            } catch (Exception e2) {
+                // Ignore and try next format
+            }
+            
+            try {
+                // Try with T separator
+                if (!dateTimeStr.contains("T") && dateTimeStr.contains(" ")) {
+                    return LocalDateTime.parse(dateTimeStr.replace(" ", "T"));
+                }
+            } catch (Exception e3) {
+                // Ignore and return null
+            }
+        }
+        return null;
+    }
 }
