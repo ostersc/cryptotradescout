@@ -248,22 +248,42 @@ function getDefaultParameters(algorithmId) {
             return {
                 shortPeriod: "Period for short moving average (typically 5-15)",
                 longPeriod: "Period for long moving average (typically 20-50)",
-                orderAmount: "Amount of asset to trade per order (e.g., 0.1 BTC)",
-                maxSlippage: "Maximum allowed slippage percentage (e.g., 0.5)"
+                positionSize: "0.1",
+                feeRate: "0.002",
+                taxRate: "0.15"
             };
         case 'arbitrage':
             return {
                 minProfitPercentage: "Minimum profit percentage to execute arbitrage (e.g., 1.5)",
                 maxTransactionFee: "Maximum transaction fee percentage (e.g., 0.5)",
-                orderAmount: "Amount of asset to trade per order (e.g., 0.1 BTC)",
-                maxSlippage: "Maximum allowed slippage percentage (e.g., 0.5)"
+                positionSize: "0.1",
+                feeRate: "0.002",
+                taxRate: "0.15"
+            };
+        case 'relative-strength-index':
+            return {
+                period: "14",
+                overboughtThreshold: "70",
+                oversoldThreshold: "30",
+                positionSize: "0.1",
+                feeRate: "0.002",
+                taxRate: "0.15"
+            };
+        case 'bollinger-bands':
+            return {
+                period: "20",
+                deviationMultiple: "2.0",
+                positionSize: "0.1",
+                feeRate: "0.002",
+                taxRate: "0.15"
             };
         default:
             return {
                 period: "Time period parameter",
                 threshold: "Threshold value for decisions",
-                amount: "Trading amount per order",
-                maxSlippage: "Maximum allowed slippage percentage (e.g., 0.5)"
+                positionSize: "0.1",
+                feeRate: "0.002",
+                taxRate: "0.15"
             };
     }
 }

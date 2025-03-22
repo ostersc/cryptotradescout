@@ -33,6 +33,8 @@ function loadTradingAlgorithmParameters() {
         return;
     }
     
+    console.log('Loading parameters for algorithm:', algorithmId);
+    
     fetch(`/api/algorithms/${algorithmId}`)
         .then(response => {
             if (!response.ok) {
@@ -66,20 +68,118 @@ function loadTradingAlgorithmParameters() {
                     input.setAttribute('placeholder', description);
                     input.required = true;
                     
-                    // Set default values based on parameter names
-                    if (param.toLowerCase().includes('period')) {
-                        input.type = 'number';
-                        if (param.toLowerCase().includes('short')) {
+                    // Set default values based on algorithm and parameter
+                    // Set default values based on algorithm type
+                    if (algorithmId === 'simple-moving-average') {
+                        if (param === 'shortPeriod') {
+                            input.type = 'number';
                             input.value = '5';
-                        } else if (param.toLowerCase().includes('long')) {
+                        } else if (param === 'longPeriod') {
+                            input.type = 'number';
                             input.value = '20';
-                        } else {
-                            input.value = '10';
+                        } else if (param === 'positionSize') {
+                            input.type = 'number';
+                            input.value = '0.1';
+                            input.step = '0.01';
+                        } else if (param === 'feeRate') {
+                            input.type = 'number';
+                            input.value = '0.002';
+                            input.step = '0.0001';
+                        } else if (param === 'taxRate') {
+                            input.type = 'number';
+                            input.value = '0.15';
+                            input.step = '0.01';
                         }
-                    } else if (param.toLowerCase().includes('amount')) {
-                        input.type = 'number';
-                        input.value = '0.001';  // smaller amount for live trading
-                        input.step = '0.001';
+                    } else if (algorithmId === 'relative-strength-index') {
+                        if (param === 'period') {
+                            input.type = 'number';
+                            input.value = '14';
+                        } else if (param === 'overboughtThreshold') {
+                            input.type = 'number';
+                            input.value = '70';
+                        } else if (param === 'oversoldThreshold') {
+                            input.type = 'number';
+                            input.value = '30';
+                        } else if (param === 'positionSize') {
+                            input.type = 'number';
+                            input.value = '0.1';
+                            input.step = '0.01';
+                        } else if (param === 'feeRate') {
+                            input.type = 'number';
+                            input.value = '0.002';
+                            input.step = '0.0001';
+                        } else if (param === 'taxRate') {
+                            input.type = 'number';
+                            input.value = '0.15';
+                            input.step = '0.01';
+                        }
+                    } else if (algorithmId === 'bollinger-bands') {
+                        if (param === 'period') {
+                            input.type = 'number';
+                            input.value = '20';
+                        } else if (param === 'deviationMultiple') {
+                            input.type = 'number';
+                            input.value = '2.0';
+                            input.step = '0.1';
+                        } else if (param === 'positionSize') {
+                            input.type = 'number';
+                            input.value = '0.1';
+                            input.step = '0.01';
+                        } else if (param === 'feeRate') {
+                            input.type = 'number';
+                            input.value = '0.002';
+                            input.step = '0.0001';
+                        } else if (param === 'taxRate') {
+                            input.type = 'number';
+                            input.value = '0.15';
+                            input.step = '0.01';
+                        }
+                    } else if (algorithmId === 'arbitrage') {
+                        if (param === 'minProfitPercentage') {
+                            input.type = 'number';
+                            input.value = '1.5';
+                            input.step = '0.1';
+                        } else if (param === 'maxTransactionFee') {
+                            input.type = 'number';
+                            input.value = '0.5';
+                            input.step = '0.1';
+                        } else if (param === 'positionSize') {
+                            input.type = 'number';
+                            input.value = '0.1';
+                            input.step = '0.01';
+                        } else if (param === 'feeRate') {
+                            input.type = 'number';
+                            input.value = '0.002';
+                            input.step = '0.0001';
+                        } else if (param === 'taxRate') {
+                            input.type = 'number';
+                            input.value = '0.15';
+                            input.step = '0.01';
+                        }
+                    } else {
+                        // Set default values based on parameter names for unknown algorithms
+                        if (param.toLowerCase().includes('period')) {
+                            input.type = 'number';
+                            if (param.toLowerCase().includes('short')) {
+                                input.value = '5';
+                            } else if (param.toLowerCase().includes('long')) {
+                                input.value = '20';
+                            } else {
+                                input.value = '10';
+                            }
+                        } else if (param.toLowerCase().includes('position') || param.toLowerCase().includes('amount')) {
+                            input.type = 'number';
+                            input.value = '0.1';  // conservative amount for live trading
+                            input.step = '0.01';
+                        } else if (param.toLowerCase().includes('fee')) {
+                            input.type = 'number';
+                            input.value = '0.002';
+                            input.step = '0.0001';
+                        } else if (param.toLowerCase().includes('tax')) {
+                            input.type = 'number';
+                            input.value = '0.15';
+                            input.step = '0.01';
+                        }
                     }
                     
                     paramDiv.appendChild(label);
@@ -90,7 +190,93 @@ function loadTradingAlgorithmParameters() {
         })
         .catch(error => {
             console.error('Error fetching algorithm parameters:', error);
+            
+            // Fallback to using preset defaults
+            const defaultParams = getTradingDefaultParameters(algorithmId);
+            
+            if (defaultParams) {
+                // Add a title for the parameters section
+                const title = document.createElement('h6');
+                title.className = 'mt-3 mb-2';
+                title.textContent = 'Algorithm Parameters (Default)';
+                paramsContainer.appendChild(title);
+                
+                // Create input fields for each parameter
+                for (const [param, value] of Object.entries(defaultParams)) {
+                    const paramDiv = document.createElement('div');
+                    paramDiv.className = 'mb-3';
+                    
+                    const label = document.createElement('label');
+                    label.setAttribute('for', `trading-param-${param}`);
+                    label.className = 'form-label';
+                    label.textContent = param;
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control';
+                    input.id = `trading-param-${param}`;
+                    input.name = `trading-param-${param}`;
+                    input.value = value;
+                    input.required = true;
+                    
+                    paramDiv.appendChild(label);
+                    paramDiv.appendChild(input);
+                    paramsContainer.appendChild(paramDiv);
+                }
+            }
         });
+}
+
+/**
+ * Gets default parameters for a given algorithm ID for trading
+ * 
+ * @param {string} algorithmId - The algorithm ID
+ * @returns {Object} Object with parameter defaults
+ */
+function getTradingDefaultParameters(algorithmId) {
+    switch (algorithmId) {
+        case 'simple-moving-average':
+            return {
+                shortPeriod: 5,
+                longPeriod: 20,
+                positionSize: 0.1,
+                feeRate: 0.002,
+                taxRate: 0.15
+            };
+        case 'arbitrage':
+            return {
+                minProfitPercentage: 1.5,
+                maxTransactionFee: 0.5,
+                positionSize: 0.1,
+                feeRate: 0.002,
+                taxRate: 0.15
+            };
+        case 'relative-strength-index':
+            return {
+                period: 14,
+                overboughtThreshold: 70,
+                oversoldThreshold: 30,
+                positionSize: 0.1,
+                feeRate: 0.002,
+                taxRate: 0.15
+            };
+        case 'bollinger-bands':
+            return {
+                period: 20,
+                deviationMultiple: 2.0,
+                positionSize: 0.1,
+                feeRate: 0.002,
+                taxRate: 0.15
+            };
+        default:
+            return {
+                period: 10,
+                threshold: 0.5,
+                positionSize: 0.1,
+                feeRate: 0.002,
+                taxRate: 0.15
+            };
+    }
 }
 
 /**
