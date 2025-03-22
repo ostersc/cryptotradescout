@@ -176,7 +176,9 @@ function populateTradingAlgorithmParameters(algorithm, container) {
                 
                 // Use smaller steps for fee rates specifically
                 if (param.toLowerCase() === 'feerate') {
-                    input.step = '0.0001';
+                    input.type = 'number'; 
+                    input.step = 'any';
+                    input.min = '0';
                 }
             }
             
