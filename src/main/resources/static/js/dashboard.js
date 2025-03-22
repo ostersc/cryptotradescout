@@ -238,17 +238,18 @@ function initializePriceChart() {
             return;
         }
         
-        // Bitcoin's base price - used for initial scaling
+        // Bitcoin's base price - hardcoded to ensure consistent scale
+        // This is the expected price range for BTC, around $84,000
         const basePrice = 84230;
         
-        // Fixed scale: Always show a 2% range (1% above and below the current price)
-        // This ensures the chart stays readable without exaggerating small fluctuations
-        const fixedMinPrice = basePrice * 0.99;  // 1% below base price
-        const fixedMaxPrice = basePrice * 1.01;  // 1% above base price
+        // Fixed range - 1% on each side of base price
+        const fixedMinPrice = basePrice * 0.99;  // 1% below
+        const fixedMaxPrice = basePrice * 1.01;  // 1% above
         
-        // Global chart setting to prevent auto-scaling
-        Chart.defaults.scale.grace = '0%';
+        // Override global Chart.js settings to force fixed scaling
+        Chart.defaults.scale.grace = 0;
         
+        // Create chart with absolutely fixed settings
         priceChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -259,14 +260,29 @@ function initializePriceChart() {
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.1)',
                     fill: true,
-                    tension: 0.1
+                    tension: 0.1,
+                    pointRadius: 2 // Smaller points to reduce visual noise
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: {
-                    duration: 0 // Disable animations to prevent scale jumping
+                animation: false, // Completely disable animations
+                transitions: {
+                    active: {
+                        animation: {
+                            duration: 0 // No animation during interactions
+                        }
+                    }
+                },
+                elements: {
+                    line: {
+                        tension: 0.1 // Slight curve for better visuals
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    intersect: false // Easier tooltips
                 },
                 plugins: {
                     title: {
@@ -279,6 +295,9 @@ function initializePriceChart() {
                                 return formatCurrency(context.raw);
                             }
                         }
+                    },
+                    legend: {
+                        display: false // Hide legend to save space
                     }
                 },
                 scales: {
@@ -286,6 +305,10 @@ function initializePriceChart() {
                         title: {
                             display: true,
                             text: 'Time (Local)'
+                        },
+                        ticks: {
+                            autoSkip: true,
+                            maxRotation: 0 // Horizontal labels
                         }
                     },
                     y: {
@@ -296,13 +319,16 @@ function initializePriceChart() {
                         ticks: {
                             callback: function(value) {
                                 return formatCurrency(value);
-                            }
+                            },
+                            precision: 0, // Whole dollar values
+                            autoSkip: false
                         },
-                        suggestedMin: fixedMinPrice,
-                        suggestedMax: fixedMaxPrice,
-                        // Force a fixed scale 
+                        // These are the critical settings that force a fixed scale
                         min: fixedMinPrice,
-                        max: fixedMaxPrice
+                        max: fixedMaxPrice,
+                        // Explicitly disable auto-scaling mechanisms
+                        beginAtZero: false,
+                        grace: 0
                     }
                 }
             }
@@ -477,9 +503,16 @@ function updatePriceChart(data) {
             priceChart.data.datasets[0].data.shift();
         }
         
-        // FIXED SCALE: The chart is initialized with a fixed scale set by min and max
-        // parameters. We don't need to update these values here because we want the scale
-        // to remain stable. This ensures the chart doesn't resize with small price changes.
+        // ABSOLUTELY FIXED SCALE: Always maintain the same scale regardless of updates
+        // These are set once at the beginning and never changed
+        const basePrice = 84230;
+        priceChart.options.scales.y.min = basePrice * 0.99;  // 1% below
+        priceChart.options.scales.y.max = basePrice * 1.01;  // 1% above
+        
+        // Force Chart.js to respect our fixed scale by disabling auto-scaling
+        priceChart.options.scales.y.beginAtZero = false;
+        priceChart.options.scales.y.grace = 0;
+        priceChart.options.scales.y.ticks.autoSkip = false;
         
         // Update the chart with animation disabled to prevent jumping
         priceChart.update({
