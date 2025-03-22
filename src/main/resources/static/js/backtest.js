@@ -209,11 +209,11 @@ function loadAlgorithmParameters() {
     
     console.log('Loading parameters for algorithm:', algorithmId);
     
-    // Try to fetch from API first, but fall back to sample data if it fails
+    // Fetch algorithm details from API which includes both parameters and their default values
     fetch(`/api/algorithms/${algorithmId}`)
         .then(response => {
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`HTTP error ${response.status}`);
             }
             return response.json();
         })
@@ -223,15 +223,60 @@ function loadAlgorithmParameters() {
             populateAlgorithmParameters(algorithm, paramsContainer);
         })
         .catch(error => {
-            console.error('Error fetching algorithm parameters, using defaults:', error);
-            
-            // Make sure container is empty before populating
-            paramsContainer.innerHTML = '';
-            // Use default parameters based on algorithm ID
-            const defaultParams = getDefaultParameters(algorithmId);
+            console.error('Error fetching algorithm details:', error);
+            // Fallback to parameters-only endpoint if the details endpoint fails
+            fetchParametersOnly(algorithmId, paramsContainer);
+        });
+}
+
+/**
+ * Fallback method to fetch only parameters if the full details endpoint fails
+ * 
+ * @param {string} algorithmId - The algorithm ID
+ * @param {HTMLElement} paramsContainer - The container element
+ */
+function fetchParametersOnly(algorithmId, paramsContainer) {
+    // Fetch algorithm parameters from API
+    fetch(`/api/algorithms/${algorithmId}/parameters`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(parameters => {
+            // Fetch default parameters separately
+            fetch(`/api/algorithms/${algorithmId}/default-parameters`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(defaultParameters => {
+                    populateAlgorithmParameters({
+                        id: algorithmId,
+                        parameters: parameters,
+                        defaultParameters: defaultParameters
+                    }, paramsContainer);
+                })
+                .catch(error => {
+                    console.error('Error fetching default parameters:', error);
+                    // Use hardcoded fallback defaults if API fails
+                    populateAlgorithmParameters({
+                        id: algorithmId,
+                        parameters: parameters,
+                        defaultParameters: getDefaultParameters(algorithmId)
+                    }, paramsContainer);
+                });
+        })
+        .catch(error => {
+            console.error('Error fetching algorithm parameters:', error);
+            // Last resort fallback using hardcoded values for both parameters and defaults
             populateAlgorithmParameters({
                 id: algorithmId,
-                parameters: defaultParams
+                parameters: getDefaultParameters(algorithmId),
+                defaultParameters: getDefaultParameters(algorithmId)
             }, paramsContainer);
         });
 }
@@ -324,30 +369,61 @@ function populateAlgorithmParameters(algorithm, container) {
             input.setAttribute('placeholder', description);
             input.required = true;
             
-            // Set default values based on parameter names
-            if (param.toLowerCase().includes('period')) {
-                input.type = 'number';
-                if (param.toLowerCase().includes('short')) {
-                    input.value = '5';
-                } else if (param.toLowerCase().includes('long')) {
-                    input.value = '20';
-                } else {
-                    input.value = '10';
+            // Determine the default value from the defaultParameters if available
+            let defaultValue = '';
+            
+            // Check if default parameters are available from the API
+            if (algorithm.defaultParameters && algorithm.defaultParameters[param] !== undefined) {
+                defaultValue = algorithm.defaultParameters[param];
+                console.log(`Using default value from API for ${param}: ${defaultValue}`);
+            } else {
+                // Set default values based on parameter names as fallback
+                if (param.toLowerCase().includes('period')) {
+                    if (param.toLowerCase().includes('short')) {
+                        defaultValue = 5;
+                    } else if (param.toLowerCase().includes('long')) {
+                        defaultValue = 20;
+                    } else {
+                        defaultValue = 10;
+                    }
+                } else if (param.toLowerCase().includes('amount')) {
+                    defaultValue = 0.1;
+                } else if (param.toLowerCase() === 'maxslippage') {
+                    defaultValue = 0.5;
+                } else if (param.toLowerCase().includes('percentage')) {
+                    defaultValue = 1.5;
+                } else if (param.toLowerCase() === 'feerate') {
+                    defaultValue = 0.002;
+                } else if (param.toLowerCase() === 'taxrate') {
+                    defaultValue = 0.15;
+                } else if (param.toLowerCase().includes('threshold')) {
+                    if (param.toLowerCase().includes('overbought')) {
+                        defaultValue = 70;
+                    } else if (param.toLowerCase().includes('oversold')) {
+                        defaultValue = 30;
+                    }
+                } else if (param.toLowerCase().includes('deviation')) {
+                    defaultValue = 2.0;
                 }
-            } else if (param.toLowerCase().includes('amount')) {
-                input.type = 'number';
-                input.value = '0.1';
-                input.step = '0.01';
-            } else if (param.toLowerCase() === 'maxslippage') {
-                input.type = 'number';
-                input.value = '0.5';
-                input.step = '0.1';
-            } else if (param.toLowerCase().includes('percentage') || 
-                       param.toLowerCase().includes('fee')) {
-                input.type = 'number';
-                input.value = '1.5';
-                input.step = '0.1';
             }
+            
+            // Set the input type based on the parameter name
+            if (param.toLowerCase().includes('period') ||
+                param.toLowerCase().includes('threshold') ||
+                param.toLowerCase().includes('deviation')) {
+                input.type = 'number';
+                input.step = '0.1';
+            } else if (param.toLowerCase().includes('amount') ||
+                     param.toLowerCase().includes('size') ||
+                     param.toLowerCase().includes('fee') ||
+                     param.toLowerCase().includes('tax') ||
+                     param.toLowerCase().includes('percentage')) {
+                input.type = 'number';
+                input.step = '0.01';
+            }
+            
+            // Set the value from the default
+            input.value = defaultValue;
             
             paramDiv.appendChild(label);
             paramDiv.appendChild(input);

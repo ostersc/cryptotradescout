@@ -35,6 +35,7 @@ function loadTradingAlgorithmParameters() {
     
     console.log('Loading parameters for algorithm:', algorithmId);
     
+    // Fetch algorithm details from API which includes both parameters and their default values
     fetch(`/api/algorithms/${algorithmId}`)
         .then(response => {
             if (!response.ok) {
