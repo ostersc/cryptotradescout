@@ -102,12 +102,12 @@ function createAlgorithmCard(algorithm) {
     });
     
     col.querySelector('.backtest-algorithm').addEventListener('click', () => {
-        // Switch to backtest tab and select this algorithm
+        // Store the algorithm ID in session storage for the backtest page
+        console.log(`Storing algorithm ID for backtest: ${algorithm.id}`);
+        sessionStorage.setItem('selected-algorithm-for-backtest', algorithm.id);
+        
+        // Switch to backtest tab
         document.getElementById('backtest-tab').click();
-        document.getElementById('backtest-algorithm').value = algorithm.id;
-        // Trigger the change event to load algorithm parameters
-        const changeEvent = new Event('change');
-        document.getElementById('backtest-algorithm').dispatchEvent(changeEvent);
     });
     
     return col;
@@ -175,15 +175,17 @@ function displayAlgorithmDetails(algorithm) {
         document.getElementById('backtest-selected-algorithm').addEventListener('click', () => {
             // Get the current algorithm ID
             const algorithmId = document.getElementById('algorithm-details-content').getAttribute('data-algorithm-id');
+            
+            // Store the algorithm ID in session storage for the backtest page
+            console.log(`Storing algorithm ID for backtest from modal: ${algorithmId}`);
+            sessionStorage.setItem('selected-algorithm-for-backtest', algorithmId);
+            
             // Close the modal
             const modalInstance = bootstrap.Modal.getInstance(modal);
             modalInstance.hide();
-            // Switch to backtest tab and select this algorithm
+            
+            // Switch to backtest tab
             document.getElementById('backtest-tab').click();
-            document.getElementById('backtest-algorithm').value = algorithmId;
-            // Trigger the change event to load algorithm parameters
-            const changeEvent = new Event('change');
-            document.getElementById('backtest-algorithm').dispatchEvent(changeEvent);
         });
     }
     

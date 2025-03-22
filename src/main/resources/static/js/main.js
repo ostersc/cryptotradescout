@@ -130,7 +130,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                     case 'backtest-content':
                         if (typeof initializeBacktestForm === 'function') {
-                            initializeBacktestForm();
+                            // Check if we have an algorithm ID stored in session storage
+                            const selectedAlgorithm = sessionStorage.getItem('selected-algorithm-for-backtest');
+                            initializeBacktestForm(selectedAlgorithm);
+                            // Clear it after use
+                            sessionStorage.removeItem('selected-algorithm-for-backtest');
                         } else {
                             console.warn('Backtest form initialization function not found');
                         }

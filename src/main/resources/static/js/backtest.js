@@ -10,12 +10,20 @@ if (typeof window.equityChart === 'undefined') {
 
 /**
  * Initializes the backtest form
+ * 
+ * @param {string} selectedAlgorithmId - Optional ID of a pre-selected algorithm
  */
-function initializeBacktestForm() {
+function initializeBacktestForm(selectedAlgorithmId) {
     try {
         console.log('Initializing backtest form...');
         const backtestForm = document.getElementById('backtest-form');
         const backtestAlgorithm = document.getElementById('backtest-algorithm');
+        
+        // Store the selected algorithm ID if provided
+        if (selectedAlgorithmId) {
+            console.log(`Pre-selected algorithm ID for backtest: ${selectedAlgorithmId}`);
+            window.preSelectedAlgorithmId = selectedAlgorithmId;
+        }
         
         if (!backtestForm || !backtestAlgorithm) {
             console.error('Backtest form elements not found');
@@ -61,9 +69,43 @@ function loadAlgorithmsForBacktest() {
                     // Use the global implementation, not the local one
                     if (typeof window.populateAlgorithmDropdowns === 'function') {
                         window.populateAlgorithmDropdowns(algorithms);
+                        
+                        // After populating the dropdown, check if we have a pre-selected algorithm
+                        if (window.preSelectedAlgorithmId) {
+                            // Select the algorithm in the dropdown
+                            const backtestAlgorithm = document.getElementById('backtest-algorithm');
+                            if (backtestAlgorithm) {
+                                backtestAlgorithm.value = window.preSelectedAlgorithmId;
+                                console.log(`Setting backtest algorithm dropdown to: ${window.preSelectedAlgorithmId}`);
+                                
+                                // Trigger the change event to load algorithm parameters
+                                const changeEvent = new Event('change');
+                                backtestAlgorithm.dispatchEvent(changeEvent);
+                                
+                                // Clear the stored value after using it
+                                window.preSelectedAlgorithmId = null;
+                            }
+                        }
                     } else if (typeof populateAlgorithmDropdowns === 'function') {
                         // Fall back to global scope function if not defined in window
                         populateAlgorithmDropdowns(algorithms);
+                        
+                        // After populating the dropdown, check if we have a pre-selected algorithm
+                        if (window.preSelectedAlgorithmId) {
+                            // Select the algorithm in the dropdown
+                            const backtestAlgorithm = document.getElementById('backtest-algorithm');
+                            if (backtestAlgorithm) {
+                                backtestAlgorithm.value = window.preSelectedAlgorithmId;
+                                console.log(`Setting backtest algorithm dropdown to: ${window.preSelectedAlgorithmId}`);
+                                
+                                // Trigger the change event to load algorithm parameters
+                                const changeEvent = new Event('change');
+                                backtestAlgorithm.dispatchEvent(changeEvent);
+                                
+                                // Clear the stored value after using it
+                                window.preSelectedAlgorithmId = null;
+                            }
+                        }
                     } else {
                         console.error('populateAlgorithmDropdowns function not found');
                     }
