@@ -15,6 +15,7 @@ public class Order {
     private LocalDateTime createdAt;
     private String status;
     private String exchange;
+    private Double totalValue; // Portfolio value at the time of the order, used for backtesting
 
     /**
      * Default constructor.
@@ -207,12 +208,26 @@ public class Order {
     }
 
     /**
-     * Calculate the total value of this order (amount * price).
+     * Get the total portfolio value at the time of this order.
      * 
-     * @return the total value
+     * @return the total portfolio value
      */
-    public double getTotalValue() {
+    public Double getTotalValue() {
+        if (totalValue != null) {
+            return totalValue;
+        }
+        // Default to calculating the order value if no portfolio value is set
         return amount * price;
+    }
+    
+    /**
+     * Set the total portfolio value at the time of this order.
+     * This is used primarily for backtesting to track equity changes.
+     * 
+     * @param totalValue the total portfolio value to set
+     */
+    public void setTotalValue(Double totalValue) {
+        this.totalValue = totalValue;
     }
 
     @Override
@@ -227,12 +242,13 @@ public class Order {
                 type == order.type &&
                 Objects.equals(createdAt, order.createdAt) &&
                 Objects.equals(status, order.status) &&
-                Objects.equals(exchange, order.exchange);
+                Objects.equals(exchange, order.exchange) &&
+                Objects.equals(totalValue, order.totalValue);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, tradingPair, type, amount, price, createdAt, status, exchange);
+        return Objects.hash(id, tradingPair, type, amount, price, createdAt, status, exchange, totalValue);
     }
 
     @Override
@@ -246,6 +262,7 @@ public class Order {
                 ", createdAt=" + createdAt +
                 ", status='" + status + '\'' +
                 ", exchange='" + exchange + '\'' +
+                ", totalValue=" + totalValue +
                 '}';
     }
 }

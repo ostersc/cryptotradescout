@@ -2,8 +2,11 @@
  * Backtest JavaScript file for handling the backtesting functionality
  */
 
-// Chart instance for equity curve
-let equityChart;
+// Chart instance for equity curve - using window object to avoid redeclaration
+// This fixes "Uncaught SyntaxError: Identifier 'equityChart' has already been declared"
+if (typeof window.equityChart === 'undefined') {
+    window.equityChart = null;
+}
 
 /**
  * Initializes the backtest form
