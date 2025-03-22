@@ -227,10 +227,12 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         order.setStatus("FILLED");
                         order.setExchange(data.getExchange());
                         
-                        // Set fee and tax information in the order
+                        // Set fee information in the order - No tax on buys, only establish cost basis
                         order.setFeeAmount(fee);
                         order.setFeeAsset(data.getTradingPair().split("-")[1]); // Fee in USD for BTC-USD
                         order.setFeeRate(feeRate);
+                        order.setTaxRate(0); // No tax on buy orders
+                        order.setEstimatedTaxLiability(0);
                         
                         // Add the order to our list
                         generatedOrders.add(order);

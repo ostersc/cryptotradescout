@@ -133,8 +133,9 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                     calculatePositionSize(currentPrice),
                     currentPrice,
                     feeRate,
-                    taxRate
+                    0.0  // No tax on buy orders, only establish cost basis
             );
+            buyOrder.setEstimatedTaxLiability(0); // Explicitly set tax to 0 for buys
             lastPrice = currentPrice;
             return Mono.just(buyOrder);
         }

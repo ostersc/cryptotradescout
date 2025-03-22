@@ -203,11 +203,12 @@ public class RSIAlgorithm implements TradingAlgorithm {
                             amount,
                             price,
                             feeRate,
-                            taxRate
+                            0.0  // No tax on buy orders, only establish cost basis
                     );
                     buyOrder.setCreatedAt(data.getTimestamp());
                     buyOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
                     buyOrder.setExchange(data.getExchange());
+                    buyOrder.setEstimatedTaxLiability(0); // Explicitly set tax to 0 for buys
                     
                     // Update portfolio
                     availableCapital -= (cost + fee);

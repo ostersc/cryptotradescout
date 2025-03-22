@@ -304,11 +304,13 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     buyOrder.setStatus("FILLED");
                     buyOrder.setExchange(bestBuyExchange);
                     
-                    // Calculate and set buy fee
+                    // Calculate and set buy fee - No tax on buys, only establish cost basis
                     double buyFeeAmount = amountToBuy * lowestAsk * feeRate;
                     buyOrder.setFeeAmount(buyFeeAmount);
                     buyOrder.setFeeRate(feeRate);
                     buyOrder.setFeeAsset(tradingPair.split("-")[1]); // Fee in USD for BTC-USD
+                    buyOrder.setTaxRate(0); // No tax on buy orders
+                    buyOrder.setEstimatedTaxLiability(0); // No tax liability on buys
                     
                     generatedOrders.add(buyOrder);
                     
