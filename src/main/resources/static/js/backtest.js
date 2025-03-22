@@ -693,9 +693,25 @@ function displayBacktestResults(results) {
         const finalCapitalEl = document.getElementById('result-final-capital');
         const profitLossEl = document.getElementById('result-profit-loss');
         const returnEl = document.getElementById('result-return');
+        const cashBalanceEl = document.getElementById('result-cash-balance');
+        const cryptoHoldingsEl = document.getElementById('result-crypto-holdings');
+        const cryptoValueEl = document.getElementById('result-crypto-value');
         
         if (initialCapitalEl) initialCapitalEl.textContent = formatCurrency(initialCapital);
         if (finalCapitalEl) finalCapitalEl.textContent = formatCurrency(finalCapital);
+        
+        // Add cash and crypto breakdown
+        if (cashBalanceEl) cashBalanceEl.textContent = formatCurrency(availableCash);
+        if (cryptoHoldingsEl && cryptoHoldings > 0) {
+            cryptoHoldingsEl.textContent = `${cryptoHoldings.toFixed(8)} units`;
+        } else if (cryptoHoldingsEl) {
+            cryptoHoldingsEl.textContent = 'None';
+        }
+        
+        if (cryptoValueEl) {
+            const cryptoValue = cryptoHoldings * lastPrice;
+            cryptoValueEl.textContent = formatCurrency(cryptoValue);
+        }
         
         if (profitLossEl) {
             profitLossEl.textContent = formatCurrency(profit);
@@ -1127,31 +1143,52 @@ function displayTrades(orders, results) {
             return;
         }
         
-        tradesTable.innerHTML = '';
-        
-        if (!orders || orders.length === 0) {
-            const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="11" class="text-center">No trades executed</td>';
-            tradesTable.appendChild(row);
-            return;
+        // Clear the table but don't remove the header which is defined in the HTML
+        // Only keep the first row (header) if it exists
+        if (tradesTable.rows.length > 0) {
+            // Ensure the header has the correct columns
+            const headerRow = tradesTable.rows[0];
+            headerRow.innerHTML = `
+                <th>Date & Time</th>
+                <th>Type</th>
+                <th>Price</th>
+                <th>Amount</th>
+                <th>Trade Value</th>
+                <th>Fee</th>
+                <th>Tax</th>
+                <th>Cash</th>
+                <th>Crypto Value</th>
+                <th>Total Value</th>
+                <th>Return</th>
+            `;
+            
+            // Remove all rows except the header
+            while (tradesTable.rows.length > 1) {
+                tradesTable.deleteRow(1);
+            }
+        } else {
+            // If no header exists, create one
+            const headerRow = tradesTable.insertRow();
+            headerRow.innerHTML = `
+                <th>Date & Time</th>
+                <th>Type</th>
+                <th>Price</th>
+                <th>Amount</th>
+                <th>Trade Value</th>
+                <th>Fee</th>
+                <th>Tax</th>
+                <th>Cash</th>
+                <th>Crypto Value</th>
+                <th>Total Value</th>
+                <th>Return</th>
+            `;
         }
         
-        // Update the header to include the new portfolio metrics columns
-        const headerRow = document.createElement('tr');
-        headerRow.innerHTML = `
-            <th>Date & Time</th>
-            <th>Type</th>
-            <th>Price</th>
-            <th>Amount</th>
-            <th>Trade Value</th>
-            <th>Fee</th>
-            <th>Tax</th>
-            <th>Cash</th>
-            <th>Crypto Value</th>
-            <th>Total Value</th>
-            <th>Return</th>
-        `;
-        tradesTable.appendChild(headerRow);
+        if (!orders || orders.length === 0) {
+            const row = tradesTable.insertRow();
+            row.innerHTML = '<td colspan="11" class="text-center">No trades executed</td>';
+            return;
+        }
         
         // Initialize tracking variables for portfolio metrics
         const initialCapital = results.initialCapital || 10000;

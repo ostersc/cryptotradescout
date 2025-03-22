@@ -254,6 +254,21 @@
                                         <h4 id="result-return">+25.00%</h4>
                                     </div>
                                 </div>
+                                <!-- Portfolio breakdown -->
+                                <div class="row text-center mb-4">
+                                    <div class="col-md-4">
+                                        <h6>Cash Balance</h6>
+                                        <h5 id="result-cash-balance">$10,000.00</h5>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>Crypto Holdings</h6>
+                                        <h5 id="result-crypto-holdings">None</h5>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>Crypto Value</h6>
+                                        <h5 id="result-crypto-value">$0.00</h5>
+                                    </div>
+                                </div>
                                 <div class="row mb-4">
                                     <div class="col-md-12">
                                         <canvas id="equity-chart"></canvas>
@@ -296,13 +311,17 @@
                                 <table class="table table-sm table-hover">
                                     <thead>
                                         <tr>
-                                            <th>Date</th>
+                                            <th>Date & Time</th>
                                             <th>Type</th>
                                             <th>Price</th>
                                             <th>Amount</th>
-                                            <th>Value</th>
+                                            <th>Trade Value</th>
                                             <th>Fee</th>
                                             <th>Tax</th>
+                                            <th>Cash</th>
+                                            <th>Crypto Value</th>
+                                            <th>Total Value</th>
+                                            <th>Return</th>
                                         </tr>
                                     </thead>
                                     <tbody id="backtest-trades">
