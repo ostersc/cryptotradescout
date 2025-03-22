@@ -48,7 +48,8 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
     private boolean priceBelowBands = false;
     
     // Track cumulative gain/loss for proper tax treatment
-    private double liveCumulativeCapitalGainLoss = 0.0;
+    private double liveCumulativeCapitalGainLoss = 0.0; // For live trading
+    private double cumulativeCapitalGainLoss = 0.0; // For backtesting
     
     /**
      * Initialize the algorithm with configuration parameters.
@@ -223,7 +224,7 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
         List<Order> orders = new ArrayList<>();
         double availableCapital = initialCapital;
         double cryptoHoldings = 0.0;
-        double cumulativeCapitalGainLoss = 0.0; // Track cumulative gain/loss for tax purposes
+        this.cumulativeCapitalGainLoss = 0.0; // Reset the class variable for this backtest run
         
         // Sort historical data by timestamp (oldest first)
         List<MarketData> sortedData = historicalData.stream()
@@ -316,14 +317,14 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                     double netGain = gain - sellFee - buyFee;
                     
                     // Add this gain/loss to our cumulative running total
-                    cumulativeCapitalGainLoss += netGain;
+                    this.cumulativeCapitalGainLoss += netGain;
                     
                     // Tax is only applied to the cumulative gain, not individual trades
                     // If cumulative is negative, there's no tax liability (it's a capital loss)
                     double tax = 0.0;
-                    if (cumulativeCapitalGainLoss > 0) {
+                    if (this.cumulativeCapitalGainLoss > 0) {
                         // Only apply tax to positive cumulative gains
-                        tax = cumulativeCapitalGainLoss * taxRate;
+                        tax = this.cumulativeCapitalGainLoss * taxRate;
                     }
                     
                     Order sellOrder = new Order(
