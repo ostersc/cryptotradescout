@@ -4,6 +4,8 @@ import com.crypto.trading.algorithm.AlgorithmRegistry;
 import com.crypto.trading.algorithm.TradingAlgorithm;
 import com.crypto.trading.backtest.BacktestResult;
 import com.crypto.trading.backtest.BacktestService;
+import com.crypto.trading.exchange.ExchangeService;
+import com.crypto.trading.exchange.model.MarketData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -195,18 +198,34 @@ public class BacktestController {
                 algorithmParams = Map.of(); // Use defaults
             }
             
+            // Store variables that need to be final for the lambda in truly final variables
+            final String capturedAlgorithmId = algorithmId;
+            final String capturedExchange = exchange;
+            final String capturedTradingPair = tradingPair;
+            final LocalDateTime capturedStartTime = startTime;
+            final LocalDateTime capturedEndTime = endTime;
+            final double capturedInitialCapital = initialCapital;
+            final Map<String, Object> capturedAlgorithmParams = algorithmParams;
+            
             logger.info("Starting backtest for algorithm {} on {} {} from {} to {}",
-                    algorithmId, exchange, tradingPair, startTime, endTime);
+                    capturedAlgorithmId, capturedExchange, capturedTradingPair, capturedStartTime, capturedEndTime);
             
             // Run the backtest
             return backtestService.runBacktest(
-                    algorithm, exchange, tradingPair, startTime, endTime, 
-                    initialCapital, algorithmParams)
+                    algorithm, capturedExchange, capturedTradingPair, capturedStartTime, capturedEndTime, 
+                    capturedInitialCapital, capturedAlgorithmParams)
                     .map(ResponseEntity::ok)
                     .defaultIfEmpty(ResponseEntity.notFound().build())
                     .onErrorResume(e -> {
-                        logger.error("Error running backtest", e);
-                        return Mono.just(ResponseEntity.badRequest().build());
+                        logger.error("Error running backtest: {}", e.getMessage(), e);
+                        
+                        // Return a more detailed error response instead of just a bad request
+                        BacktestResult errorResult = new BacktestResult(
+                            capturedAlgorithmId, capturedExchange, capturedTradingPair, 
+                            capturedStartTime, capturedEndTime, capturedInitialCapital,
+                            null, 0, null);
+                        errorResult.setErrorMessage("Failed to complete backtest: " + e.getMessage());
+                        return Mono.just(ResponseEntity.status(500).body(errorResult));
                     });
                     
         } catch (Exception e) {
@@ -216,11 +235,50 @@ public class BacktestController {
     }
     
     /**
-     * Helper method to parse a date-time string in various formats.
+     * Test endpoint to get historical market data directly for diagnostic purposes.
      * 
-     * @param dateTimeStr the date-time string
-     * @return the parsed LocalDateTime, or null if parsing failed
+     * @param exchange the exchange name
+     * @param tradingPair the trading pair
+     * @param startTime the start time
+     * @param endTime the end time
+     * @return a ResponseEntity with the historical data
      */
+    @GetMapping("/test-historical-data")
+    public Mono<ResponseEntity<List<MarketData>>> testHistoricalData(
+            @RequestParam String exchange,
+            @RequestParam String tradingPair,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
+        
+        logger.info("Testing historical data fetch for {} {} from {} to {}", 
+            exchange, tradingPair, startTime, endTime);
+        
+        // Find the exchange service
+        ExchangeService exchangeService = null;
+        for (ExchangeService service : backtestService.getExchangeServices().values()) {
+            if (service.getExchangeName().equalsIgnoreCase(exchange)) {
+                exchangeService = service;
+                break;
+            }
+        }
+        
+        if (exchangeService == null) {
+            return Mono.just(ResponseEntity.badRequest().build());
+        }
+        
+        // Fetch the historical data directly
+        return exchangeService.getHistoricalMarketData(tradingPair, startTime, endTime)
+                .map(data -> {
+                    logger.info("Retrieved {} historical data points", data.size());
+                    return ResponseEntity.ok(data);
+                })
+                .defaultIfEmpty(ResponseEntity.notFound().build())
+                .onErrorResume(e -> {
+                    logger.error("Error fetching historical market data: {}", e.getMessage(), e);
+                    return Mono.just(ResponseEntity.status(500).build());
+                });
+    }
+
     private LocalDateTime parseDateTime(String dateTimeStr) {
         try {
             // Try direct ISO format parsing (default)

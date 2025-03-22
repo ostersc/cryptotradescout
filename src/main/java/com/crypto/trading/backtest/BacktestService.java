@@ -34,6 +34,15 @@ public class BacktestService {
     public BacktestService(Map<String, ExchangeService> exchangeServices) {
         this.exchangeServices = exchangeServices;
     }
+    
+    /**
+     * Get the exchange services map.
+     * 
+     * @return the map of available exchange services
+     */
+    public Map<String, ExchangeService> getExchangeServices() {
+        return exchangeServices;
+    }
 
     /**
      * Run a backtest for a trading algorithm against historical data.

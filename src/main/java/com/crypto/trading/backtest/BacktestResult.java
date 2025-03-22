@@ -19,6 +19,8 @@ public class BacktestResult {
     private final List<Order> generatedOrders;
     private final long executionTimeMs;
     private final PerformanceMetrics metrics;
+    private String errorMessage;
+    private boolean hasError = false;
 
 
     /**
@@ -132,10 +134,10 @@ public class BacktestResult {
     /**
      * Get the number of trades executed during the backtest.
      *
-     * @return the number of trades
+     * @return the number of trades, or 0 if no orders were generated
      */
     public int getNumberOfTrades() {
-        return generatedOrders.size();
+        return generatedOrders != null ? generatedOrders.size() : 0;
     }
 
     /**
@@ -147,8 +149,67 @@ public class BacktestResult {
         return java.time.Duration.between(startTime, endTime).toDays();
     }
     
+    /**
+     * Get the error message if an error occurred during the backtest.
+     *
+     * @return the error message, or null if no error occurred
+     */
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    /**
+     * Set the error message and mark this result as having an error.
+     *
+     * @param errorMessage the error message to set
+     */
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+        this.hasError = true;
+    }
+
+    /**
+     * Check if this result represents an error condition.
+     *
+     * @return true if an error occurred, false otherwise
+     */
+    public boolean hasError() {
+        return hasError;
+    }
+
+    /**
+     * Factory method to create a result object for an error condition.
+     *
+     * @param algorithmId the algorithm ID
+     * @param exchange the exchange name
+     * @param tradingPair the trading pair
+     * @param startTime the start time
+     * @param endTime the end time 
+     * @param initialCapital the initial capital
+     * @param errorMessage the error message
+     * @return a BacktestResult instance with the error details
+     */
+    public static BacktestResult createErrorResult(
+            String algorithmId, String exchange, String tradingPair,
+            LocalDateTime startTime, LocalDateTime endTime, double initialCapital,
+            String errorMessage) {
+        BacktestResult result = new BacktestResult(
+                algorithmId, exchange, tradingPair, startTime, endTime,
+                initialCapital, null, 0, null);
+        result.setErrorMessage(errorMessage);
+        return result;
+    }
+
     @Override
     public String toString() {
+        if (hasError) {
+            return "BacktestResult{" +
+                    "algorithmId='" + algorithmId + '\'' +
+                    ", exchange='" + exchange + '\'' +
+                    ", tradingPair='" + tradingPair + '\'' +
+                    ", ERROR='" + errorMessage + '\'' +
+                    '}';
+        }
         return "BacktestResult{" +
                 "algorithmId='" + algorithmId + '\'' +
                 ", exchange='" + exchange + '\'' +
@@ -156,7 +217,7 @@ public class BacktestResult {
                 ", startTime=" + startTime +
                 ", endTime=" + endTime +
                 ", initialCapital=" + initialCapital +
-                ", numberOfTrades=" + generatedOrders.size() +
+                ", numberOfTrades=" + (generatedOrders != null ? generatedOrders.size() : 0) +
                 ", executionTimeMs=" + executionTimeMs +
                 ", metrics=" + metrics +
                 '}';
