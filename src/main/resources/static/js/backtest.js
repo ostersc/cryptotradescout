@@ -200,19 +200,22 @@ function getDefaultParameters(algorithmId) {
             return {
                 shortPeriod: "Period for short moving average (typically 5-15)",
                 longPeriod: "Period for long moving average (typically 20-50)",
-                orderAmount: "Amount of asset to trade per order (e.g., 0.1 BTC)"
+                orderAmount: "Amount of asset to trade per order (e.g., 0.1 BTC)",
+                maxSlippage: "Maximum allowed slippage percentage (e.g., 0.5)"
             };
         case 'arbitrage':
             return {
                 minProfitPercentage: "Minimum profit percentage to execute arbitrage (e.g., 1.5)",
                 maxTransactionFee: "Maximum transaction fee percentage (e.g., 0.5)",
-                orderAmount: "Amount of asset to trade per order (e.g., 0.1 BTC)"
+                orderAmount: "Amount of asset to trade per order (e.g., 0.1 BTC)",
+                maxSlippage: "Maximum allowed slippage percentage (e.g., 0.5)"
             };
         default:
             return {
                 period: "Time period parameter",
                 threshold: "Threshold value for decisions",
-                amount: "Trading amount per order"
+                amount: "Trading amount per order",
+                maxSlippage: "Maximum allowed slippage percentage (e.g., 0.5)"
             };
     }
 }
@@ -263,6 +266,10 @@ function populateAlgorithmParameters(algorithm, container) {
                 input.type = 'number';
                 input.value = '0.1';
                 input.step = '0.01';
+            } else if (param.toLowerCase() === 'maxslippage') {
+                input.type = 'number';
+                input.value = '0.5';
+                input.step = '0.1';
             } else if (param.toLowerCase().includes('percentage') || 
                        param.toLowerCase().includes('fee')) {
                 input.type = 'number';
