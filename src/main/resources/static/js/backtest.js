@@ -634,15 +634,12 @@ function displayBacktestResults(results) {
         
         // Update summary information
         const initialCapital = results.initialCapital || 10000;
-        let finalCapital = initialCapital;
-        let cryptoHoldings = 0;
-        let lastPrice = 0;
-        
         // For proper portfolio calculation, we need to track:
         // 1. Available cash capital 
         // 2. Crypto holdings and their current market value
         
-        // Reset tracking variables
+        // Initialize tracking variables
+        let finalCapital = initialCapital;
         let availableCash = initialCapital;
         let cryptoHoldings = 0;
         let lastPrice = 0;
