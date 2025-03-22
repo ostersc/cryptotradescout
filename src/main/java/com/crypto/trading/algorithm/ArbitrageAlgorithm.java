@@ -31,6 +31,9 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
     private double feeRate = 0.002; // Default fee rate (0.2%)
     private double taxRate = 0.15; // Default tax rate (15%)
     
+    // Track cumulative gain/loss for proper tax treatment
+    private double liveCumulativeCapitalGainLoss = 0.0;
+    
     /**
      * Constructor for the arbitrage algorithm.
      * 
@@ -224,6 +227,7 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
         List<Order> generatedOrders = new ArrayList<>();
         double currentCapital = initialCapital;
         double cryptoHoldings = 0.0;
+        double cumulativeCapitalGainLoss = 0.0; // Reset for this backtest run
         
         // Skip backtest if we don't have enough data
         if (historicalData.size() < 10) {
@@ -338,8 +342,14 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     double grossProfit = sellAmount - buyAmount;
                     double netProfit = grossProfit - buyFee - sellFee;
                     
-                    // Only tax positive profits
-                    double tax = Math.max(0, netProfit * taxRate);
+                    // Add this trade's net profit/loss to our cumulative tracking
+                    cumulativeCapitalGainLoss += netProfit;
+                    
+                    // Only tax positive cumulative profits
+                    double tax = 0.0;
+                    if (cumulativeCapitalGainLoss > 0) {
+                        tax = cumulativeCapitalGainLoss * taxRate;
+                    }
                     
                     // Set fee and tax information in the sell order
                     sellOrder.setFeeAmount(sellFee);

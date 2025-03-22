@@ -48,7 +48,8 @@ public class RSIAlgorithm implements TradingAlgorithm {
     private double lastPrice = 0.0;
     
     // Track cumulative gain/loss for proper tax treatment
-    private double liveCumulativeCapitalGainLoss = 0.0;
+    private double liveCumulativeCapitalGainLoss = 0.0; // For live trading
+    private double cumulativeCapitalGainLoss = 0.0; // For backtesting
     
     /**
      * Initialize the algorithm with configuration parameters.

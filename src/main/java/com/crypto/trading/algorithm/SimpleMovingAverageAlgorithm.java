@@ -33,6 +33,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
     
     // Track cumulative gain/loss for proper tax treatment
     private double liveCumulativeCapitalGainLoss = 0.0;
+    private double cumulativeCapitalGainLoss = 0.0; // For backtest method
     
     /**
      * Get the unique identifier for this algorithm.
@@ -147,12 +148,49 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
             } else {
                 // Short-term MA crossed below long-term MA - SELL signal
                 logger.info("SELL signal generated at price: {}", marketData.getLastPrice());
+                
+                double amount = tradeAmount;
+                double currentPrice = marketData.getLastPrice();
+                
+                // For live trading, we'd need to look up the cost basis from a service
+                // that tracks all buy orders. This is simplified for the demo.
+                double costBasisPrice = lastBuyPrice > 0 ? lastBuyPrice : currentPrice * 0.95; 
+                
+                double revenue = amount * currentPrice;
+                double sellFee = revenue * feeRate;
+                
+                // Calculate total cost basis (what you paid for the crypto originally)
+                double totalCostBasis = amount * costBasisPrice;
+                double buyFee = totalCostBasis * feeRate;
+                double totalBuyCost = totalCostBasis + buyFee;
+                
+                // Calculate the gain (or loss) - this is revenue minus what you paid
+                double gain = revenue - totalCostBasis;
+                
+                // Calculate the net gain after fees
+                double netGain = gain - sellFee - buyFee;
+                
+                // Add this gain/loss to our cumulative running total for live trading
+                liveCumulativeCapitalGainLoss += netGain;
+                
+                // Tax is only applied to the cumulative gain, not individual trades
+                // If cumulative is negative, there's no tax liability (it's a capital loss credit)
+                double tax = 0.0;
+                if (liveCumulativeCapitalGainLoss > 0) {
+                    // Only apply tax to positive cumulative gains
+                    tax = liveCumulativeCapitalGainLoss * taxRate;
+                }
+                
                 order = new Order(
                         marketData.getTradingPair(),
-                        OrderType.MARKET,
-                        tradeAmount,
-                        marketData.getLastPrice()
+                        OrderType.SELL, // Changed to SELL specifically
+                        amount,
+                        currentPrice,
+                        feeRate,
+                        taxRate
                 );
+                order.setTaxableGain(netGain);
+                order.setEstimatedTaxLiability(tax);
             }
             
             // Update the last crossover state
@@ -180,6 +218,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
         dataWindow.clear();
         lastCrossover = false;
         lastBuyPrice = 0;
+        cumulativeCapitalGainLoss = 0.0; // Reset cumulative gain/loss tracker for this backtest run
         
         double currentCapital = initialCapital;
         double cryptoHoldings = 0.0;
@@ -281,8 +320,19 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         // We need to track the cost basis and only apply tax to actual profits
                         // For simplicity, we'll estimate the cost basis from when we bought
                         double costBasis = order.getAmount() * lastBuyPrice;
-                        double profit = grossProceeds - fee - costBasis;
-                        double estimatedTaxLiability = Math.max(0, profit * taxRate); // Only tax positive profits
+                        double buyFee = costBasis * feeRate; // Fee paid during purchase
+                        double profit = grossProceeds - fee - costBasis - buyFee;
+                        
+                        // Add this gain/loss to our cumulative running total
+                        cumulativeCapitalGainLoss += profit;
+                        
+                        // Tax is only applied to the cumulative gain, not individual trades
+                        // If cumulative is negative, there's no tax liability (it's a capital loss)
+                        double estimatedTaxLiability = 0.0;
+                        if (cumulativeCapitalGainLoss > 0) {
+                            // Only apply tax to positive cumulative gains
+                            estimatedTaxLiability = cumulativeCapitalGainLoss * taxRate;
+                        }
                         order.setTaxRate(taxRate);
                         order.setEstimatedTaxLiability(estimatedTaxLiability);
                         
