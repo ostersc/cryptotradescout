@@ -324,14 +324,14 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         double profit = grossProceeds - fee - costBasis - buyFee;
                         
                         // Add this gain/loss to our cumulative running total
-                        cumulativeCapitalGainLoss += profit;
+                        this.cumulativeCapitalGainLoss += profit;
                         
                         // Tax is only applied to the cumulative gain, not individual trades
                         // If cumulative is negative, there's no tax liability (it's a capital loss)
                         double estimatedTaxLiability = 0.0;
-                        if (cumulativeCapitalGainLoss > 0) {
+                        if (this.cumulativeCapitalGainLoss > 0) {
                             // Only apply tax to positive cumulative gains
-                            estimatedTaxLiability = cumulativeCapitalGainLoss * taxRate;
+                            estimatedTaxLiability = this.cumulativeCapitalGainLoss * taxRate;
                         }
                         order.setTaxRate(taxRate);
                         order.setEstimatedTaxLiability(estimatedTaxLiability);
