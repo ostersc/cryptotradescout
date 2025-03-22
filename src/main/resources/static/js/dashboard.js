@@ -491,11 +491,27 @@ function updatePriceChart(data) {
         const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
         const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
         
-        // If trading pair changed, reset chart
-        if (priceChart.data.datasets[0].label !== `${currentPair} (${currentExchange})`) {
+        // If trading pair changed, reset chart and set initial scale
+        const currentChartLabel = `${currentPair} (${currentExchange})`;
+        if (priceChart.data.datasets[0].label !== currentChartLabel) {
+            // Save the incoming data point so we don't lose it
+            const currentPrice = data.lastPrice;
+            
+            // Reset chart data
             priceChart.data.labels = [];
             priceChart.data.datasets[0].data = [];
-            priceChart.data.datasets[0].label = `${currentPair} (${currentExchange})`;
+            priceChart.data.datasets[0].label = currentChartLabel;
+            
+            // Update chart title
+            priceChart.options.plugins.title.text = `${currentPair} Price (${currentExchange})`;
+            
+            // Set initial scale for the new cryptocurrency with 10% buffer
+            // This ensures the chart has a scale even with just one data point
+            const buffer = currentPrice * 0.01; // 1% for initial scale
+            priceChart.options.scales.y.min = Math.max(0, currentPrice - buffer);
+            priceChart.options.scales.y.max = currentPrice + buffer;
+            
+            console.log(`Resetting chart for ${currentChartLabel} with initial price: ${currentPrice}`);
         }
         
         // Add the formatted local time to the chart
