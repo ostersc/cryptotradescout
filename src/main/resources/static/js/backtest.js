@@ -669,10 +669,10 @@ function displayBacktestResults(results) {
         displayPerformanceMetrics(results, initialCapital, finalCapital, profit, returnPercent);
         
         // Display trade statistics
-        displayTradeStatistics(results.generatedOrders);
+        displayTradeStatistics(results.generatedOrders, results);
         
         // Display trades
-        displayTrades(results.generatedOrders);
+        displayTrades(results.generatedOrders, results);
     } catch (error) {
         console.error('Error displaying backtest results:', error);
     }
@@ -907,6 +907,7 @@ function displayPerformanceMetrics(results, initialCapital, finalCapital, profit
  * Displays trade statistics
  * 
  * @param {Array} orders - Array of order objects
+ * @param {Object} results - Optional backtest results with backend metrics
  */
 function displayTradeStatistics(orders, results) {
     try {
@@ -1025,8 +1026,9 @@ function displayTradeStatistics(orders, results) {
  * Displays the list of trades
  * 
  * @param {Array} orders - Array of order objects
+ * @param {Object} results - Optional backtest results with backend metrics
  */
-function displayTrades(orders) {
+function displayTrades(orders, results) {
     try {
         const tradesTable = document.getElementById('backtest-trades');
         
@@ -1053,19 +1055,39 @@ function displayTrades(orders) {
             const amount = order.amount || 0;
             const fee = order.feeAmount || order.fee || 0;
             
-            // Use estimatedTaxLiability as the primary tax value if available, otherwise try taxableGain or tax
+            // Get the tax value for this order, prioritizing certain fields
             let tax = 0;
+            
+            // First try to get estimatedTaxLiability (from the backend)
             if (typeof order.estimatedTaxLiability !== 'undefined') {
                 tax = order.estimatedTaxLiability;
-            } else if (typeof order.tax !== 'undefined') {
+            } 
+            // Then try to get taxableGain (if present)
+            else if (typeof order.taxableGain !== 'undefined' && order.taxableGain > 0) {
+                // If we have taxableGain and taxRate, we can calculate the tax
+                if (order.taxRate) {
+                    tax = order.taxableGain * order.taxRate;
+                }
+            } 
+            // Fallback to tax field if present
+            else if (typeof order.tax !== 'undefined') {
                 tax = order.tax;
             }
             
             // Highlight buy/sell with different colors
             const typeClass = type.toUpperCase() === 'BUY' ? 'text-success' : 'text-danger';
             
-            // Only display tax if positive (gains), otherwise show no tax
-            const taxDisplay = tax > 0 ? formatCurrency(tax) : '$0.00';
+            // Only display tax if positive (gains) or explicitly negative (losses/credits)
+            // Negative values represent tax credits from capital losses
+            let taxDisplay;
+            if (tax > 0) {
+                taxDisplay = formatCurrency(tax);
+            } else if (tax < 0) {
+                // Show tax credits with a different color and "(credit)" label
+                taxDisplay = `<span class="text-info">${formatCurrency(Math.abs(tax))} (credit)</span>`;
+            } else {
+                taxDisplay = '$0.00';
+            }
             
             row.innerHTML = `
                 <td>${createdAt}</td>
