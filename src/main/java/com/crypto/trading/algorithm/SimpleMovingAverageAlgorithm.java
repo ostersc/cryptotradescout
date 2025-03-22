@@ -29,6 +29,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
     private double positionSize = 0.1; // 10% position size by default
     private final Queue<MarketData> dataWindow = new LinkedList<>();
     private boolean lastCrossover = false; // false = below, true = above
+    private double lastBuyPrice = 0; // Track the average price at which we bought
     
     /**
      * Get the unique identifier for this algorithm.
@@ -175,6 +176,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
         List<Order> generatedOrders = new ArrayList<>();
         dataWindow.clear();
         lastCrossover = false;
+        lastBuyPrice = 0;
         
         double currentCapital = initialCapital;
         double cryptoHoldings = 0.0;
@@ -236,6 +238,8 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         // Update holdings
                         cryptoHoldings += amountToBuy;
                         currentCapital -= (investmentAmount); // Deduct the total investment including fees
+                        // Save the buy price for tax calculations
+                        lastBuyPrice = data.getLastPrice();
                         
                         logger.debug("Backtest BUY: {} {} at price {} - Fee: {}, Capital: {}, Holdings: {}", 
                                 amountToBuy, data.getTradingPair().split("-")[0], 
@@ -269,7 +273,11 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         order.setFeeRate(feeRate);
                         
                         // Calculate and set tax information
-                        double estimatedTaxLiability = (grossProceeds - fee) * taxRate;
+                        // We need to track the cost basis and only apply tax to actual profits
+                        // For simplicity, we'll estimate the cost basis from when we bought
+                        double costBasis = order.getAmount() * lastBuyPrice;
+                        double profit = grossProceeds - fee - costBasis;
+                        double estimatedTaxLiability = Math.max(0, profit * taxRate); // Only tax positive profits
                         order.setTaxRate(taxRate);
                         order.setEstimatedTaxLiability(estimatedTaxLiability);
                         

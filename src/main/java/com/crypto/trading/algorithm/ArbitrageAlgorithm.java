@@ -28,6 +28,8 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
     private double minProfitPercentage = 1.0; // Minimum profit percentage to execute arbitrage
     private double tradeAmount = 0.01; // Default amount to trade
     private double maxSlippage = 0.5; // Maximum allowed slippage in percentage
+    private double feeRate = 0.002; // Default fee rate (0.2%)
+    private double taxRate = 0.15; // Default tax rate (15%)
     
     /**
      * Constructor for the arbitrage algorithm.
@@ -101,11 +103,25 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
             }
         }
         
+        if (parameters.containsKey("feeRate")) {
+            Object value = parameters.get("feeRate");
+            if (value instanceof Number) {
+                this.feeRate = ((Number) value).doubleValue();
+            }
+        }
+        
+        if (parameters.containsKey("taxRate")) {
+            Object value = parameters.get("taxRate");
+            if (value instanceof Number) {
+                this.taxRate = ((Number) value).doubleValue();
+            }
+        }
+        
         // Clear existing market data
         latestMarketData.clear();
         
-        logger.info("Initialized ArbitrageAlgorithm with minProfitPercentage={}, tradeAmount={}, maxSlippage={}",
-                minProfitPercentage, tradeAmount, maxSlippage);
+        logger.info("Initialized ArbitrageAlgorithm with minProfitPercentage={}, tradeAmount={}, maxSlippage={}, feeRate={}, taxRate={}",
+                minProfitPercentage, tradeAmount, maxSlippage, feeRate, taxRate);
     }
     
     /**
@@ -287,6 +303,13 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     buyOrder.setCreatedAt(currentData.getTimestamp());
                     buyOrder.setStatus("FILLED");
                     buyOrder.setExchange(bestBuyExchange);
+                    
+                    // Calculate and set buy fee
+                    double buyFeeAmount = amountToBuy * lowestAsk * feeRate;
+                    buyOrder.setFeeAmount(buyFeeAmount);
+                    buyOrder.setFeeRate(feeRate);
+                    buyOrder.setFeeAsset(tradingPair.split("-")[1]); // Fee in USD for BTC-USD
+                    
                     generatedOrders.add(buyOrder);
                     
                     // Update holdings
@@ -305,8 +328,26 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
                     sellOrder.setExchange(bestSellExchange);
                     generatedOrders.add(sellOrder);
                     
+                    // Calculate fees and tax
+                    double buyAmount = amountToBuy * lowestAsk;
+                    double sellAmount = amountToBuy * highestBid;
+                    double buyFee = buyAmount * feeRate;
+                    double sellFee = sellAmount * feeRate;
+                    double grossProfit = sellAmount - buyAmount;
+                    double netProfit = grossProfit - buyFee - sellFee;
+                    
+                    // Only tax positive profits
+                    double tax = Math.max(0, netProfit * taxRate);
+                    
+                    // Set fee and tax information in the sell order
+                    sellOrder.setFeeAmount(sellFee);
+                    sellOrder.setFeeRate(feeRate);
+                    sellOrder.setFeeAsset(tradingPair.split("-")[1]); // Fee in USD for BTC-USD
+                    sellOrder.setTaxRate(taxRate);
+                    sellOrder.setEstimatedTaxLiability(tax);
+                    
                     // Update holdings
-                    currentCapital = amountToBuy * highestBid * 0.99; // 99% to account for fees
+                    currentCapital = sellAmount - sellFee - tax;
                     cryptoHoldings = 0;
                     
                     logger.debug("Backtest Arbitrage: Buy {} on {} at {}, Sell on {} at {}, Profit: {}%",
