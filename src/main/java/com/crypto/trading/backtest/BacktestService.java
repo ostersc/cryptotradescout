@@ -4,6 +4,7 @@ import com.crypto.trading.algorithm.TradingAlgorithm;
 import com.crypto.trading.exchange.ExchangeService;
 import com.crypto.trading.exchange.model.MarketData;
 import com.crypto.trading.exchange.model.Order;
+import com.crypto.trading.exchange.model.OrderType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -373,6 +374,8 @@ public class BacktestService {
             
             // Create order object
             Order order = new Order();
+            // Initialize status to prevent null pointer exceptions
+            order.setStatus("FILLED");
             
             // Use reflection to set fields (since Order might be immutable or use builders)
             try {
@@ -382,7 +385,9 @@ public class BacktestService {
                 
                 java.lang.reflect.Field typeField = order.getClass().getDeclaredField("type");
                 typeField.setAccessible(true);
-                typeField.set(order, orderType);
+                // Convert string to OrderType enum
+                OrderType type = "BUY".equals(orderType) ? OrderType.BUY : OrderType.SELL;
+                typeField.set(order, type);
                 
                 java.lang.reflect.Field tradingPairField = order.getClass().getDeclaredField("tradingPair");
                 tradingPairField.setAccessible(true);
