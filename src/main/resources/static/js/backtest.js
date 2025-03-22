@@ -368,8 +368,8 @@ function runBacktest(event) {
             algorithmParams
         };
         
-        // Try both API endpoints
-        fetch('/api/backtest/run', {
+        // Use a single API endpoint for consistency
+        fetch('/api/backtest', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -378,20 +378,7 @@ function runBacktest(event) {
         })
         .then(response => {
             if (!response.ok) {
-                // Try the alternate endpoint
-                return fetch('/api/backtest', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-            }
-            return response;
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Both backtest endpoints failed. Check server logs.');
+                throw new Error('Backtest endpoint failed. Check server logs.');
             }
             return response.json();
         })
