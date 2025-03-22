@@ -47,6 +47,9 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
     private boolean priceAboveBands = false;
     private boolean priceBelowBands = false;
     
+    // Track cumulative gain/loss for proper tax treatment
+    private double liveCumulativeCapitalGainLoss = 0.0;
+    
     /**
      * Initialize the algorithm with configuration parameters.
      * 
@@ -161,8 +164,16 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
             // Calculate the net gain after fees
             double netGain = gain - sellFee - buyFee;
             
-            // Tax is only applied to the gain portion, not the entire amount!
-            double tax = Math.max(0, netGain * taxRate); // Only tax positive gains
+            // Add this gain/loss to our cumulative running total for live trading
+            liveCumulativeCapitalGainLoss += netGain;
+            
+            // Tax is only applied to the cumulative gain, not individual trades
+            // If cumulative is negative, there's no tax liability (it's a capital loss credit)
+            double tax = 0.0;
+            if (liveCumulativeCapitalGainLoss > 0) {
+                // Only apply tax to positive cumulative gains
+                tax = liveCumulativeCapitalGainLoss * taxRate;
+            }
             
             Order sellOrder = new Order(
                     marketData.getTradingPair(),
@@ -212,6 +223,7 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
         List<Order> orders = new ArrayList<>();
         double availableCapital = initialCapital;
         double cryptoHoldings = 0.0;
+        double cumulativeCapitalGainLoss = 0.0; // Track cumulative gain/loss for tax purposes
         
         // Sort historical data by timestamp (oldest first)
         List<MarketData> sortedData = historicalData.stream()
@@ -303,8 +315,16 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                     // Calculate the net gain after fees
                     double netGain = gain - sellFee - buyFee;
                     
-                    // Tax is only applied to the gain portion, not the entire amount!
-                    double tax = Math.max(0, netGain * taxRate); // Only tax positive gains
+                    // Add this gain/loss to our cumulative running total
+                    cumulativeCapitalGainLoss += netGain;
+                    
+                    // Tax is only applied to the cumulative gain, not individual trades
+                    // If cumulative is negative, there's no tax liability (it's a capital loss)
+                    double tax = 0.0;
+                    if (cumulativeCapitalGainLoss > 0) {
+                        // Only apply tax to positive cumulative gains
+                        tax = cumulativeCapitalGainLoss * taxRate;
+                    }
                     
                     Order sellOrder = new Order(
                             data.getTradingPair(),
