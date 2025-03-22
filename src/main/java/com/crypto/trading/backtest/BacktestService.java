@@ -168,8 +168,11 @@ public class BacktestService {
         // Calculate values at each trade
         for (Order order : orders) {
             double orderValue = order.getAmount() * order.getPrice();
+            
+            // Ensure the order has a status set to avoid NPE - default to "FILLED" if null 
+            String orderStatus = order.getStatus() != null ? order.getStatus() : "FILLED";
 
-            if (order.getStatus().equals("FILLED")) {
+            if (orderStatus.equals("FILLED")) {
                 if (isMatchingPair(order.getTradingPair(), historicalData.get(0).getTradingPair())) {
                     // Adjust for transaction fees (approximately 0.1-0.25% per trade)
                     double fee = orderValue * 0.002; // 0.2% fee

@@ -206,6 +206,8 @@ public class RSIAlgorithm implements TradingAlgorithm {
                             taxRate
                     );
                     buyOrder.setCreatedAt(data.getTimestamp());
+                    buyOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
+                    buyOrder.setExchange(data.getExchange());
                     
                     // Update portfolio
                     availableCapital -= (cost + fee);
@@ -238,6 +240,8 @@ public class RSIAlgorithm implements TradingAlgorithm {
                             taxRate
                     );
                     sellOrder.setCreatedAt(data.getTimestamp());
+                    sellOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
+                    sellOrder.setExchange(data.getExchange());
                     
                     // Update portfolio
                     availableCapital += (revenue - fee - tax);
