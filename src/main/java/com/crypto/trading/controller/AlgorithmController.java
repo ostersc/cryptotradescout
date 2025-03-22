@@ -78,6 +78,7 @@ public class AlgorithmController {
         details.put("name", algorithm.getName());
         details.put("description", algorithm.getDescription());
         details.put("parameters", algorithm.getRequiredParameters());
+        details.put("defaultParameters", algorithm.getDefaultParameters());
         
         return Mono.just(ResponseEntity.ok(details));
     }
@@ -135,5 +136,27 @@ public class AlgorithmController {
                 .getRequiredParameters();
         
         return Mono.just(ResponseEntity.ok(parameters));
+    }
+    
+    /**
+     * Get the default parameter values for an algorithm.
+     * 
+     * @param algorithmId the algorithm ID
+     * @return a ResponseEntity containing the default parameter values
+     */
+    @GetMapping("/{algorithmId}/default-parameters")
+    public Mono<ResponseEntity<Map<String, Object>>> getAlgorithmDefaultParameters(
+            @PathVariable String algorithmId) {
+        
+        logger.info("Request for algorithm default parameters: {}", algorithmId);
+        
+        if (!algorithmRegistry.hasAlgorithm(algorithmId)) {
+            return Mono.just(ResponseEntity.notFound().build());
+        }
+        
+        Map<String, Object> defaultParameters = algorithmRegistry.getAlgorithm(algorithmId)
+                .getDefaultParameters();
+        
+        return Mono.just(ResponseEntity.ok(defaultParameters));
     }
 }

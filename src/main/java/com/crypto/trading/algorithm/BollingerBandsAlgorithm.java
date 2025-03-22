@@ -361,6 +361,17 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
     }
     
     @Override
+    public Map<String, Object> getDefaultParameters() {
+        Map<String, Object> defaults = new HashMap<>();
+        defaults.put("period", period);
+        defaults.put("deviationMultiple", deviationMultiple);
+        defaults.put("positionSize", positionSize);
+        defaults.put("feeRate", feeRate);
+        defaults.put("taxRate", taxRate);
+        return defaults;
+    }
+    
+    @Override
     public boolean validateParameters(Map<String, Object> parameters) {
         if (parameters.containsKey("period")) {
             int paramPeriod = ((Number) parameters.get("period")).intValue();

@@ -321,7 +321,27 @@ public class ArbitrageAlgorithm implements TradingAlgorithm {
         params.put("minProfitPercentage", "Minimum profit percentage required to execute arbitrage (after fees)");
         params.put("tradeAmount", "Amount of cryptocurrency to trade on each arbitrage opportunity");
         params.put("maxSlippage", "Maximum allowed slippage in percentage");
+        params.put("positionSize", "The size of each position as a fraction of available capital (0.0-1.0)");
+        params.put("feeRate", "The trading fee rate as a decimal (e.g., 0.002 for 0.2%)");
+        params.put("taxRate", "The tax rate for calculating estimated tax liability");
         return params;
+    }
+    
+    /**
+     * Get the default parameter values for this algorithm.
+     * 
+     * @return a map of parameter names to their default values
+     */
+    @Override
+    public Map<String, Object> getDefaultParameters() {
+        Map<String, Object> defaults = new HashMap<>();
+        defaults.put("minProfitPercentage", minProfitPercentage);
+        defaults.put("tradeAmount", tradeAmount);
+        defaults.put("maxSlippage", maxSlippage);
+        defaults.put("positionSize", 0.1);
+        defaults.put("feeRate", 0.002);
+        defaults.put("taxRate", 0.15);
+        return defaults;
     }
     
     /**

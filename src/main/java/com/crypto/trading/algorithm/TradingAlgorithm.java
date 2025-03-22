@@ -66,6 +66,14 @@ public interface TradingAlgorithm {
     Map<String, String> getRequiredParameters();
     
     /**
+     * Get the default parameter values for this algorithm.
+     * These values will be used when no specific values are provided.
+     * 
+     * @return a map of parameter names to their default values
+     */
+    Map<String, Object> getDefaultParameters();
+    
+    /**
      * Validate the configuration parameters.
      * 
      * @param parameters the configuration parameters to validate
