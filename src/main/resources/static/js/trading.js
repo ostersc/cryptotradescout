@@ -189,7 +189,6 @@ function populateTradingAlgorithmParameters(algorithm, container) {
         }
     }
 }
-}
 
 /**
  * Gets default parameters for a given algorithm ID for trading
