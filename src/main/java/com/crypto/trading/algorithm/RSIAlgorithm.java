@@ -310,6 +310,8 @@ public class RSIAlgorithm implements TradingAlgorithm {
                             feeRate,
                             taxRate
                     );
+                    sellOrder.setTaxableGain(netGain); // Set the gain/loss amount for this trade
+                    sellOrder.setEstimatedTaxLiability(tax); // Set the tax based on cumulative gain/loss
                     sellOrder.setCreatedAt(data.getTimestamp());
                     sellOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
                     sellOrder.setExchange(data.getExchange());
