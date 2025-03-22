@@ -238,13 +238,16 @@ function initializePriceChart() {
             return;
         }
         
-        // Define a reasonable starting y-axis range for BTC price (around $84,000 currently)
-        const basePrice = 84000;
-        const initialMinPrice = basePrice * 0.99; // 1% below base price
-        const initialMaxPrice = basePrice * 1.01; // 1% above base price
+        // Bitcoin's base price - used for initial scaling
+        const basePrice = 84230;
         
-        // Explicitly get browser timezone
-        const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        // Fixed scale: Always show a 2% range (1% above and below the current price)
+        // This ensures the chart stays readable without exaggerating small fluctuations
+        const fixedMinPrice = basePrice * 0.99;  // 1% below base price
+        const fixedMaxPrice = basePrice * 1.01;  // 1% above base price
+        
+        // Global chart setting to prevent auto-scaling
+        Chart.defaults.scale.grace = '0%';
         
         priceChart = new Chart(ctx, {
             type: 'line',
@@ -262,6 +265,9 @@ function initializePriceChart() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 0 // Disable animations to prevent scale jumping
+                },
                 plugins: {
                     title: {
                         display: true,
@@ -279,12 +285,7 @@ function initializePriceChart() {
                     x: {
                         title: {
                             display: true,
-                            text: 'Time (Local Timezone)'
-                        },
-                        adapters: {
-                            date: {
-                                timezone: browserTimeZone // Ensure consistent timezone display
-                            }
+                            text: 'Time (Local)'
                         }
                     },
                     y: {
@@ -297,9 +298,11 @@ function initializePriceChart() {
                                 return formatCurrency(value);
                             }
                         },
-                        min: initialMinPrice,  // Start with a reasonable range
-                        max: initialMaxPrice,  // Will be adjusted as data comes in
-                        // Remove grace to have more precise control
+                        suggestedMin: fixedMinPrice,
+                        suggestedMax: fixedMaxPrice,
+                        // Force a fixed scale 
+                        min: fixedMinPrice,
+                        max: fixedMaxPrice
                     }
                 }
             }
@@ -452,21 +455,20 @@ function updatePriceChart(data) {
     }
     
     try {
-        // Create a new Date object from the UTC timestamp
-        // The timestamp from the server is in ISO format (UTC), but the Date constructor 
-        // will automatically convert it to the local browser time
-        const timestampDate = new Date(data.timestamp);
+        // Use the server timestamp directly to create a display string in local time
+        const serverTime = new Date(data.timestamp);
         
-        // Format the date in the local timezone
-        // No need to explicitly set timeZone here as timestampDate is already converted to local time
-        const timestamp = timestampDate.toLocaleTimeString(undefined, {
+        // Format time with hours/minutes/seconds - NO timezone specifier needed
+        // JavaScript Date objects automatically use the local timezone for display
+        const localTimeString = serverTime.toLocaleTimeString(undefined, {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            hour12: false // 24-hour time format
+            hour12: false  // Use 24-hour format
         });
         
-        priceChart.data.labels.push(timestamp);
+        // Add the formatted local time to the chart
+        priceChart.data.labels.push(localTimeString);
         priceChart.data.datasets[0].data.push(data.lastPrice);
         
         // Limit to 20 visible points
@@ -475,35 +477,15 @@ function updatePriceChart(data) {
             priceChart.data.datasets[0].data.shift();
         }
         
-        // Global fixed range for y-axis to maintain consistent scaling regardless of data
-        if (priceChart.data.datasets[0].data.length > 0) {
-            const prices = priceChart.data.datasets[0].data;
-            const currentPrice = prices[prices.length - 1]; // Latest price
-            
-            // Use a fixed percentage range around the current price (±1.5%)
-            // This ensures we keep a consistent scale even as prices change slightly
-            const fixedRangePercent = 0.015; // 1.5% range on each side
-            
-            // Ensure a minimum absolute range of $500 for Bitcoin
-            const minAbsoluteRange = 500;
-            
-            // Calculate percentage-based range
-            const percentRange = currentPrice * fixedRangePercent;
-            
-            // Use the larger of percentage-based range or absolute minimum range
-            const effectiveRange = Math.max(percentRange, minAbsoluteRange / 2);
-            
-            // Calculate new min/max with the effective range
-            const newMin = currentPrice - effectiveRange;
-            const newMax = currentPrice + effectiveRange;
-            
-            // Always set the y-axis scale, forcing a consistent view
-            priceChart.options.scales.y.min = newMin;
-            priceChart.options.scales.y.max = newMax;
-        }
+        // FIXED SCALE: The chart is initialized with a fixed scale set by min and max
+        // parameters. We don't need to update these values here because we want the scale
+        // to remain stable. This ensures the chart doesn't resize with small price changes.
         
-        // Update chart
-        priceChart.update();
+        // Update the chart with animation disabled to prevent jumping
+        priceChart.update({
+            duration: 0,  // No animation
+            easing: 'linear' // Linear easing (no easing curve)
+        });
     } catch (error) {
         console.error('Error updating price chart:', error);
     }
