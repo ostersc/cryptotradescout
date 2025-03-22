@@ -29,13 +29,16 @@ public class OpenAIService {
     private static final Logger logger = LoggerFactory.getLogger(OpenAIService.class);
     private final OpenAiService service;
     private final TradingService tradingService;
+    private final String model;
 
     @Autowired
     public OpenAIService(@Value("${openai.api.key:#{environment.OPENAI_API_KEY}}") String apiKey,
+                         @Value("${openai.api.model:gpt-4}") String model,
                          TradingService tradingService) {
         this.service = new OpenAiService(apiKey, Duration.ofSeconds(60));
         this.tradingService = tradingService;
-        logger.info("OpenAI service initialized");
+        this.model = model;
+        logger.info("OpenAI service initialized with model: {}", model);
     }
 
     /**
@@ -82,7 +85,7 @@ public class OpenAIService {
             
             ChatCompletionRequest completionRequest = ChatCompletionRequest.builder()
                 .messages(messages)
-                .model("gpt-3.5-turbo-0613")
+                .model(this.model)
                 .temperature(0.3)
                 .build();
             
