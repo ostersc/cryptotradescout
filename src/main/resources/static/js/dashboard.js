@@ -1,9 +1,7 @@
 /**
  * Dashboard JavaScript file for handling the dashboard functionality
+ * Updated to use the chart-manager.js component for improved chart handling
  */
-
-// Chart instance for price display
-let priceChart;
 
 // Global variables for data tracking
 let marketDataHistory = [];
@@ -220,111 +218,25 @@ function initializeDashboard() {
 }
 
 /**
- * Initializes the price chart
+ * Initializes the price chart using the chart-manager module
  */
 function initializePriceChart() {
     try {
-        const chartCanvas = document.getElementById('price-chart');
-        
-        if (!chartCanvas) {
-            console.error('Price chart canvas element not found');
-            return;
-        }
-        
-        const ctx = chartCanvas.getContext('2d');
-        
-        if (!ctx) {
-            console.error('Failed to get 2D context from canvas');
-            return;
-        }
-        
         // Get trading pair from UI
         const pairSelector = document.getElementById('trading-pair-selector');
         const exchangeSelector = document.getElementById('exchange-selector');
         const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
         const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
         
-        // Create chart with dynamic scaling
-        priceChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: `${currentPair} (${currentExchange})`,
-                    data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    fill: true,
-                    tension: 0.1,
-                    pointRadius: 2 // Smaller points for better visuals
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false, // Disable animations
-                transitions: {
-                    active: {
-                        animation: {
-                            duration: 0 // No animation during interactions
-                        }
-                    }
-                },
-                elements: {
-                    line: {
-                        tension: 0.1 // Slight curve for better visuals
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    intersect: false // Easier tooltips
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: `${currentPair} Price (${currentExchange})`
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return formatCurrency(context.raw);
-                            }
-                        }
-                    },
-                    legend: {
-                        display: false // Hide legend to save space
-                    }
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Time (Local)'
-                        },
-                        ticks: {
-                            autoSkip: true,
-                            maxRotation: 0 // Horizontal labels
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Price (USD)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrency(value);
-                            },
-                            precision: 0, // Whole dollar values
-                            autoSkip: false
-                        },
-                        // Start with an empty dataset - scale will be set when data comes in
-                        beginAtZero: false,
-                        grace: 0
-                    }
-                }
-            }
-        });
+        // Create a placeholder data point to initialize the chart
+        // This will be replaced with actual data when it's fetched
+        const initialData = {
+            lastPrice: 0,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Initialize the chart using the chart manager module
+        window.createPriceChart('price-chart', initialData, currentPair, currentExchange);
         
         console.log('Price chart initialized successfully');
     } catch (error) {
@@ -462,136 +374,44 @@ function updateMarketDataDisplay(data) {
 }
 
 /**
- * Updates the price chart with new data
+ * Updates the price chart with new data using the chart-manager module
  * 
  * @param {Object} data - The market data object
  */
 function updatePriceChart(data) {
-    if (!data || !priceChart) {
-        console.error('Cannot update price chart: missing data or chart not initialized');
+    if (!data) {
+        console.error('Cannot update price chart: missing data');
         return;
     }
     
     try {
-        // Use the server timestamp directly to create a display string in local time
-        const serverTime = new Date(data.timestamp);
-        
-        // Format time with hours/minutes/seconds - NO timezone specifier needed
-        // JavaScript Date objects automatically use the local timezone for display
-        const localTimeString = serverTime.toLocaleTimeString(undefined, {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false  // Use 24-hour format
-        });
-        
-        // Clear chart data if trading pair or exchange has changed
+        // Get current trading pair and exchange from UI
         const pairSelector = document.getElementById('trading-pair-selector');
         const exchangeSelector = document.getElementById('exchange-selector');
         const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
         const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
         
-        // If trading pair changed, reset chart and add initial point
-        const currentChartLabel = `${currentPair} (${currentExchange})`;
-        if (priceChart.data.datasets[0].label !== currentChartLabel) {
-            console.log(`Switching chart from ${priceChart.data.datasets[0].label} to ${currentChartLabel}`);
-            
-            // Save the incoming data point
-            const currentPrice = data.lastPrice;
-            
-            // Format time for display (simple format for chart points)
-            const now = new Date();
-            const timeString = now.toLocaleTimeString(undefined, {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            });
-            
-            // Create new dataset rather than clearing the old one
-            priceChart.data = {
-                labels: [timeString],
-                datasets: [{
-                    label: currentChartLabel,
-                    data: [currentPrice],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    fill: true,
-                    tension: 0.1,
-                    pointRadius: 3
-                }]
-            };
-            
-            // Update chart title
-            priceChart.options.plugins.title.text = `${currentPair} Price (${currentExchange})`;
-            
-            // Set initial scale with buffer
-            const buffer = currentPrice * 0.02; // 2% buffer 
-            priceChart.options.scales.y.min = Math.max(0, currentPrice - buffer);
-            priceChart.options.scales.y.max = currentPrice + buffer;
-            
-            // Force immediate update to show the first point
-            priceChart.update('none'); // Use 'none' mode for instant update with no animation
-            
-            console.log(`Chart reset for ${currentChartLabel} with initial price: ${currentPrice}`);
-            
-            // Skip adding the point twice
-            return;
-        }
+        // Use the chart manager to update the chart
+        // This will handle creating a new chart if the pair or exchange has changed
+        // We're calling the chart-manager's updatePriceChart function here
+        window.updatePriceChart(data, currentPair, currentExchange);
         
-        // Add the formatted local time to the chart
-        priceChart.data.labels.push(localTimeString);
-        priceChart.data.datasets[0].data.push(data.lastPrice);
-        
-        // Limit to 20 visible points
-        if (priceChart.data.labels.length > 20) {
-            priceChart.data.labels.shift();
-            priceChart.data.datasets[0].data.shift();
-        }
-        
-        // DYNAMIC SCALING: Calculate the appropriate scale based on the min/max of actual data
-        // with +/- 10% buffer as requested
-        if (priceChart.data.datasets[0].data.length > 0) {
-            const prices = priceChart.data.datasets[0].data;
-            
-            // Find min and max prices in the current dataset
-            let minPrice = Number.MAX_VALUE;
-            let maxPrice = Number.MIN_VALUE;
-            
-            for (const price of prices) {
-                if (price < minPrice) minPrice = price;
-                if (price > maxPrice) maxPrice = price;
-            }
-            
-            // Calculate the range (difference between max and min)
-            const priceRange = maxPrice - minPrice;
-            
-            // Add 10% buffer on both sides
-            const buffer = priceRange * 0.1;
-            
-            // Set min and max with buffer (ensuring min never goes below 0)
-            const newMin = Math.max(0, minPrice - buffer);
-            const newMax = maxPrice + buffer;
-            
-            // Apply the new scale to the chart
-            priceChart.options.scales.y.min = newMin;
-            priceChart.options.scales.y.max = newMax;
-            
-            // Update chart title to reflect current pair
-            priceChart.options.plugins.title.text = `${currentPair} Price (${currentExchange})`;
-        }
-        
-        // Force Chart.js to respect our scale by disabling auto-scaling
-        priceChart.options.scales.y.beginAtZero = false;
-        priceChart.options.scales.y.grace = 0;
-        
-        // Update the chart with animation disabled to prevent jumping
-        priceChart.update({
-            duration: 0,  // No animation
-            easing: 'linear' // Linear easing (no easing curve)
-        });
     } catch (error) {
         console.error('Error updating price chart:', error);
+        
+        // If there's an error, try to recreate the chart
+        try {
+            const pairSelector = document.getElementById('trading-pair-selector');
+            const exchangeSelector = document.getElementById('exchange-selector');
+            const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
+            const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
+            
+            // Recreate chart completely
+            destroyChart();
+            createPriceChart('price-chart', data, currentPair, currentExchange);
+        } catch (recoveryError) {
+            console.error('Failed to recover chart after error:', recoveryError);
+        }
     }
 }
 
