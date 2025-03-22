@@ -35,197 +35,160 @@ function loadTradingAlgorithmParameters() {
     
     console.log('Loading parameters for algorithm:', algorithmId);
     
-    // Fetch algorithm details from API which includes both parameters and their default values
+    // Fetch algorithm details from API
     fetch(`/api/algorithms/${algorithmId}`)
         .then(response => {
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`HTTP error ${response.status}`);
             }
             return response.json();
         })
         .then(algorithm => {
-            if (algorithm.parameters) {
-                // Add a title for the parameters section
-                const title = document.createElement('h6');
-                title.className = 'mt-3 mb-2';
-                title.textContent = 'Algorithm Parameters';
-                paramsContainer.appendChild(title);
-                
-                // Create input fields for each parameter
-                for (const [param, description] of Object.entries(algorithm.parameters)) {
-                    const paramDiv = document.createElement('div');
-                    paramDiv.className = 'mb-3';
-                    
-                    const label = document.createElement('label');
-                    label.setAttribute('for', `trading-param-${param}`);
-                    label.className = 'form-label';
-                    label.textContent = param;
-                    
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'form-control';
-                    input.id = `trading-param-${param}`;
-                    input.name = `trading-param-${param}`;
-                    input.setAttribute('placeholder', description);
-                    input.required = true;
-                    
-                    // Set default values based on algorithm and parameter
-                    // Set default values based on algorithm type
-                    if (algorithmId === 'simple-moving-average') {
-                        if (param === 'shortPeriod') {
-                            input.type = 'number';
-                            input.value = '5';
-                        } else if (param === 'longPeriod') {
-                            input.type = 'number';
-                            input.value = '20';
-                        } else if (param === 'positionSize') {
-                            input.type = 'number';
-                            input.value = '0.1';
-                            input.step = '0.01';
-                        } else if (param === 'feeRate') {
-                            input.type = 'number';
-                            input.value = '0.002';
-                            input.step = '0.0001';
-                        } else if (param === 'taxRate') {
-                            input.type = 'number';
-                            input.value = '0.15';
-                            input.step = '0.01';
-                        }
-                    } else if (algorithmId === 'relative-strength-index') {
-                        if (param === 'period') {
-                            input.type = 'number';
-                            input.value = '14';
-                        } else if (param === 'overboughtThreshold') {
-                            input.type = 'number';
-                            input.value = '70';
-                        } else if (param === 'oversoldThreshold') {
-                            input.type = 'number';
-                            input.value = '30';
-                        } else if (param === 'positionSize') {
-                            input.type = 'number';
-                            input.value = '0.1';
-                            input.step = '0.01';
-                        } else if (param === 'feeRate') {
-                            input.type = 'number';
-                            input.value = '0.002';
-                            input.step = '0.0001';
-                        } else if (param === 'taxRate') {
-                            input.type = 'number';
-                            input.value = '0.15';
-                            input.step = '0.01';
-                        }
-                    } else if (algorithmId === 'bollinger-bands') {
-                        if (param === 'period') {
-                            input.type = 'number';
-                            input.value = '20';
-                        } else if (param === 'deviationMultiple') {
-                            input.type = 'number';
-                            input.value = '2.0';
-                            input.step = '0.1';
-                        } else if (param === 'positionSize') {
-                            input.type = 'number';
-                            input.value = '0.1';
-                            input.step = '0.01';
-                        } else if (param === 'feeRate') {
-                            input.type = 'number';
-                            input.value = '0.002';
-                            input.step = '0.0001';
-                        } else if (param === 'taxRate') {
-                            input.type = 'number';
-                            input.value = '0.15';
-                            input.step = '0.01';
-                        }
-                    } else if (algorithmId === 'arbitrage') {
-                        if (param === 'minProfitPercentage') {
-                            input.type = 'number';
-                            input.value = '1.5';
-                            input.step = '0.1';
-                        } else if (param === 'maxTransactionFee') {
-                            input.type = 'number';
-                            input.value = '0.5';
-                            input.step = '0.1';
-                        } else if (param === 'positionSize') {
-                            input.type = 'number';
-                            input.value = '0.1';
-                            input.step = '0.01';
-                        } else if (param === 'feeRate') {
-                            input.type = 'number';
-                            input.value = '0.002';
-                            input.step = '0.0001';
-                        } else if (param === 'taxRate') {
-                            input.type = 'number';
-                            input.value = '0.15';
-                            input.step = '0.01';
-                        }
-                    } else {
-                        // Set default values based on parameter names for unknown algorithms
-                        if (param.toLowerCase().includes('period')) {
-                            input.type = 'number';
-                            if (param.toLowerCase().includes('short')) {
-                                input.value = '5';
-                            } else if (param.toLowerCase().includes('long')) {
-                                input.value = '20';
-                            } else {
-                                input.value = '10';
-                            }
-                        } else if (param.toLowerCase().includes('position') || param.toLowerCase().includes('amount')) {
-                            input.type = 'number';
-                            input.value = '0.1';  // conservative amount for live trading
-                            input.step = '0.01';
-                        } else if (param.toLowerCase().includes('fee')) {
-                            input.type = 'number';
-                            input.value = '0.002';
-                            input.step = '0.0001';
-                        } else if (param.toLowerCase().includes('tax')) {
-                            input.type = 'number';
-                            input.value = '0.15';
-                            input.step = '0.01';
-                        }
+            // Get default parameters
+            fetch(`/api/algorithms/${algorithmId}/default-parameters`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
                     }
-                    
-                    paramDiv.appendChild(label);
-                    paramDiv.appendChild(input);
-                    paramsContainer.appendChild(paramDiv);
-                }
-            }
+                    return response.json();
+                })
+                .then(defaultParameters => {
+                    populateTradingAlgorithmParameters({
+                        id: algorithmId,
+                        parameters: algorithm.parameters,
+                        defaultParameters: defaultParameters
+                    }, paramsContainer);
+                })
+                .catch(error => {
+                    console.error('Error fetching default parameters:', error);
+                    // Use algorithm parameters with fallback defaults
+                    populateTradingAlgorithmParameters({
+                        id: algorithmId,
+                        parameters: algorithm.parameters,
+                        defaultParameters: getTradingDefaultParameters(algorithmId)
+                    }, paramsContainer);
+                });
         })
         .catch(error => {
-            console.error('Error fetching algorithm parameters:', error);
-            
-            // Fallback to using preset defaults
+            console.error('Error fetching algorithm details:', error);
+            // Fallback to hardcoded defaults
             const defaultParams = getTradingDefaultParameters(algorithmId);
             
-            if (defaultParams) {
-                // Add a title for the parameters section
-                const title = document.createElement('h6');
-                title.className = 'mt-3 mb-2';
-                title.textContent = 'Algorithm Parameters (Default)';
-                paramsContainer.appendChild(title);
-                
-                // Create input fields for each parameter
-                for (const [param, value] of Object.entries(defaultParams)) {
-                    const paramDiv = document.createElement('div');
-                    paramDiv.className = 'mb-3';
-                    
-                    const label = document.createElement('label');
-                    label.setAttribute('for', `trading-param-${param}`);
-                    label.className = 'form-label';
-                    label.textContent = param;
-                    
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'form-control';
-                    input.id = `trading-param-${param}`;
-                    input.name = `trading-param-${param}`;
-                    input.value = value;
-                    input.required = true;
-                    
-                    paramDiv.appendChild(label);
-                    paramDiv.appendChild(input);
-                    paramsContainer.appendChild(paramDiv);
+            populateTradingAlgorithmParameters({
+                id: algorithmId,
+                parameters: defaultParams,
+                defaultParameters: defaultParams
+            }, paramsContainer);
+        });
+}
+
+/**
+ * Populates algorithm parameters in the container for trading form
+ * 
+ * @param {Object} algorithm - The algorithm object
+ * @param {HTMLElement} container - The container element
+ */
+function populateTradingAlgorithmParameters(algorithm, container) {
+    if (algorithm.parameters) {
+        // First, completely empty the container to prevent parameter overlap
+        container.innerHTML = '';
+        
+        // Add a title for the parameters section
+        const title = document.createElement('h6');
+        title.className = 'mt-3 mb-2';
+        title.textContent = 'Algorithm Parameters';
+        container.appendChild(title);
+        
+        // Create input fields for each parameter
+        for (const [param, description] of Object.entries(algorithm.parameters)) {
+            const paramDiv = document.createElement('div');
+            paramDiv.className = 'mb-3 algorithm-param-field';
+            paramDiv.dataset.paramName = param; // Add data attribute to track the parameter name
+            
+            const label = document.createElement('label');
+            label.setAttribute('for', `trading-param-${param}`);
+            label.className = 'form-label';
+            label.textContent = param;
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control';
+            input.id = `trading-param-${param}`;
+            input.name = `trading-param-${param}`;
+            input.setAttribute('placeholder', description);
+            input.required = true;
+            
+            // Determine the default value from the defaultParameters if available
+            let defaultValue = '';
+            
+            // Check if default parameters are available from the API
+            if (algorithm.defaultParameters && algorithm.defaultParameters[param] !== undefined) {
+                defaultValue = algorithm.defaultParameters[param];
+                console.log(`Using default value from API for ${param}: ${defaultValue}`);
+            } else {
+                // Set default values based on parameter names as fallback
+                if (param.toLowerCase().includes('period')) {
+                    if (param.toLowerCase().includes('short')) {
+                        defaultValue = 5;
+                    } else if (param.toLowerCase().includes('long')) {
+                        defaultValue = 20;
+                    } else {
+                        defaultValue = 10;
+                    }
+                } else if (param.toLowerCase().includes('amount')) {
+                    defaultValue = 0.1;
+                } else if (param.toLowerCase() === 'maxslippage') {
+                    defaultValue = 0.5;
+                } else if (param.toLowerCase().includes('percentage')) {
+                    defaultValue = 1.5;
+                } else if (param.toLowerCase() === 'feerate') {
+                    defaultValue = 0.002;
+                } else if (param.toLowerCase() === 'taxrate') {
+                    defaultValue = 0.15;
+                } else if (param.toLowerCase().includes('threshold')) {
+                    if (param.toLowerCase().includes('overbought')) {
+                        defaultValue = 70;
+                    } else if (param.toLowerCase().includes('oversold')) {
+                        defaultValue = 30;
+                    }
+                } else if (param.toLowerCase().includes('deviation')) {
+                    defaultValue = 2.0;
+                } else if (param.toLowerCase().includes('position') && 
+                          param.toLowerCase().includes('size')) {
+                    defaultValue = 0.1;
                 }
             }
-        });
+            
+            // Set the input type based on the parameter name
+            if (param.toLowerCase().includes('period') ||
+                param.toLowerCase().includes('threshold') ||
+                param.toLowerCase().includes('deviation')) {
+                input.type = 'number';
+                input.step = '0.1';
+            } else if (param.toLowerCase().includes('amount') ||
+                     param.toLowerCase().includes('size') ||
+                     param.toLowerCase().includes('fee') ||
+                     param.toLowerCase().includes('tax') ||
+                     param.toLowerCase().includes('percentage') ||
+                     param.toLowerCase().includes('slippage')) {
+                input.type = 'number';
+                input.step = '0.01';
+                
+                // Use smaller steps for fee rates specifically
+                if (param.toLowerCase() === 'feerate') {
+                    input.step = '0.0001';
+                }
+            }
+            
+            // Set the value from the default
+            input.value = defaultValue;
+            
+            paramDiv.appendChild(label);
+            paramDiv.appendChild(input);
+            container.appendChild(paramDiv);
+        }
+    }
+}
 }
 
 /**
