@@ -491,14 +491,38 @@ function runBacktest(event) {
         
         paramInputs.forEach(input => {
             const paramName = input.id.replace('param-', '');
-            let paramValue = input.value;
+            let paramValue = input.value.trim();
             
             // Convert to number if possible
-            if (!isNaN(paramValue)) {
+            if (!isNaN(paramValue) && paramValue !== '') {
                 paramValue = parseFloat(paramValue);
+                
+                // Ensure we don't send NaN or undefined values
+                if (isNaN(paramValue)) {
+                    console.warn(`Parameter ${paramName} value could not be parsed as a number: "${input.value}"`);
+                    return; // Skip this parameter
+                }
+                
+                // Provide special handling for arbitrage algorithm
+                if (algorithmId === 'arbitrage') {
+                    // Ensure these parameters are treated as numbers
+                    if (['minProfitPercentage', 'maxSlippage', 'tradeAmount', 'positionSize', 'feeRate', 'taxRate'].includes(paramName)) {
+                        // Explicitly convert to double to avoid integer conversion issues
+                        algorithmParams[paramName] = paramValue;
+                        console.log(`Setting ${paramName} to ${paramValue} (number)`);
+                    } else {
+                        algorithmParams[paramName] = paramValue;
+                        console.log(`Setting ${paramName} to ${paramValue}`);
+                    }
+                } else {
+                    algorithmParams[paramName] = paramValue;
+                    console.log(`Setting ${paramName} to ${paramValue}`);
+                }
+            } else {
+                // String value or empty
+                algorithmParams[paramName] = paramValue;
+                console.log(`Setting ${paramName} to "${paramValue}" (string)`);
             }
-            
-            algorithmParams[paramName] = paramValue;
         });
         
         // Create request body
@@ -512,6 +536,9 @@ function runBacktest(event) {
             algorithmParams
         };
         
+        // Debug output the full request body
+        console.log('Backtest request payload:', JSON.stringify(requestBody, null, 2));
+        
         // Use a single API endpoint for consistency
         fetch('/api/backtest', {
             method: 'POST',
@@ -522,11 +549,22 @@ function runBacktest(event) {
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Backtest endpoint failed. Check server logs.');
+                // Try to get more detailed error information from the response
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON if possible
+                        const errorData = JSON.parse(text);
+                        throw new Error(errorData.message || errorData.error || `Server error: ${response.status}`);
+                    } catch (parseError) {
+                        // If not JSON, use the text or a generic message
+                        throw new Error(text || `Backtest endpoint failed with status: ${response.status}. Check server logs.`);
+                    }
+                });
             }
             return response.json();
         })
         .then(data => {
+            console.log('Backtest response:', data);
             displayBacktestResults(data);
         })
         .catch(error => {
@@ -537,6 +575,7 @@ function runBacktest(event) {
                         <h5>Backtest Error</h5>
                         <p>${error.message || 'Failed to run backtest'}</p>
                         <p>Please check that your parameters are valid and the server is running.</p>
+                        <p>Algorithm: ${algorithmId}, Parameters: ${JSON.stringify(algorithmParams)}</p>
                     </div>
                 `;
                 noResultsEl.classList.remove('d-none');
