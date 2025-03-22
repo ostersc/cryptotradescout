@@ -281,7 +281,9 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         
                         // Update holdings
                         cryptoHoldings += amountToBuy;
-                        currentCapital -= (investmentAmount); // Deduct the total investment including fees
+                        // Only deduct the fee from capital, not the whole investment amount
+                        // The rest of the investment is converted to crypto, not lost
+                        currentCapital -= fee; 
                         // Save the buy price for tax calculations
                         lastBuyPrice = data.getLastPrice();
                         

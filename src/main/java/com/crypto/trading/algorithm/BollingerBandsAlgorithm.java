@@ -267,8 +267,9 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                         buyOrder.setExchange(data.getExchange());
                         buyOrder.setEstimatedTaxLiability(0); // Explicitly set tax to 0 for buys
                         
-                        // Update portfolio
-                        availableCapital -= (cost + fee);
+                        // Update portfolio - only deduct fee, not the entire cost
+                        // The crypto purchase itself is just converting cash to crypto, not spending it
+                        availableCapital -= fee;
                         cryptoHoldings += amount;
                         
                         // Track total portfolio value at order time
