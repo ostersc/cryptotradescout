@@ -129,10 +129,13 @@ window.ChartManager = (function() {
                 }
             });
             
-            // Set initial scale with 2% buffer
-            const buffer = data.lastPrice * 0.02;
+            // Set initial scale with a default range of 1% of the price
+            // and a buffer of 10% of that range
+            const defaultRange = data.lastPrice * 0.01;
+            const buffer = defaultRange * 0.1;
             activePriceChart.options.scales.y.min = Math.max(0, data.lastPrice - buffer);
             activePriceChart.options.scales.y.max = data.lastPrice + buffer;
+            console.log(`Chart Y-axis initialized: min=${activePriceChart.options.scales.y.min}, max=${activePriceChart.options.scales.y.max}, defaultRange=${defaultRange}, buffer=${buffer}`);
             activePriceChart.update('none'); // Immediate update with no animation
             
             return activePriceChart;
@@ -166,20 +169,24 @@ window.ChartManager = (function() {
                     activePriceChart.data.datasets[0].data.shift();
                 }
                 
-                // Calculate min and max values with 10% buffer
+                // Calculate min and max values with 10% buffer based on the range
                 const prices = activePriceChart.data.datasets[0].data;
                 if (prices.length > 0) {
                     // Find min and max
                     const minPrice = Math.min(...prices);
                     const maxPrice = Math.max(...prices);
-                    const range = maxPrice - minPrice || maxPrice * 0.1; // Handle case of all identical prices
+                    const range = maxPrice - minPrice;
                     
-                    // Add buffer (10% of range or 0.5% of value, whichever is larger)
-                    const buffer = Math.max(range * 0.1, maxPrice * 0.005);
+                    // Use 10% of the range as the buffer
+                    // If all prices are identical, use 1% of the price as a default range
+                    const effectiveRange = range || maxPrice * 0.01;
+                    const buffer = effectiveRange * 0.1;
                     
                     // Set scale with buffer
                     activePriceChart.options.scales.y.min = Math.max(0, minPrice - buffer);
                     activePriceChart.options.scales.y.max = maxPrice + buffer;
+                    
+                    console.log(`Chart Y-axis adjusted: min=${activePriceChart.options.scales.y.min}, max=${activePriceChart.options.scales.y.max}, range=${effectiveRange}, buffer=${buffer}`);
                 }
                 
                 // Update without animation
