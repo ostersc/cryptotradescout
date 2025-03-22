@@ -238,36 +238,31 @@ function initializePriceChart() {
             return;
         }
         
-        // Bitcoin's base price - hardcoded to ensure consistent scale
-        // This is the expected price range for BTC, around $84,000
-        const basePrice = 84230;
+        // Get trading pair from UI
+        const pairSelector = document.getElementById('trading-pair-selector');
+        const exchangeSelector = document.getElementById('exchange-selector');
+        const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
+        const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
         
-        // Fixed range - 1% on each side of base price
-        const fixedMinPrice = basePrice * 0.99;  // 1% below
-        const fixedMaxPrice = basePrice * 1.01;  // 1% above
-        
-        // Override global Chart.js settings to force fixed scaling
-        Chart.defaults.scale.grace = 0;
-        
-        // Create chart with absolutely fixed settings
+        // Create chart with dynamic scaling
         priceChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Price (USD)',
+                    label: `${currentPair} (${currentExchange})`,
                     data: [],
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.1)',
                     fill: true,
                     tension: 0.1,
-                    pointRadius: 2 // Smaller points to reduce visual noise
+                    pointRadius: 2 // Smaller points for better visuals
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: false, // Completely disable animations
+                animation: false, // Disable animations
                 transitions: {
                     active: {
                         animation: {
@@ -287,7 +282,7 @@ function initializePriceChart() {
                 plugins: {
                     title: {
                         display: true,
-                        text: 'BTC/USD Price'
+                        text: `${currentPair} Price (${currentExchange})`
                     },
                     tooltip: {
                         callbacks: {
@@ -323,10 +318,7 @@ function initializePriceChart() {
                             precision: 0, // Whole dollar values
                             autoSkip: false
                         },
-                        // These are the critical settings that force a fixed scale
-                        min: fixedMinPrice,
-                        max: fixedMaxPrice,
-                        // Explicitly disable auto-scaling mechanisms
+                        // Start with an empty dataset - scale will be set when data comes in
                         beginAtZero: false,
                         grace: 0
                     }
@@ -516,46 +508,29 @@ function updatePriceChart(data) {
             priceChart.data.datasets[0].data.shift();
         }
         
-        // DYNAMIC SCALING: Calculate the appropriate scale based on current data
-        // This ensures the chart scale adapts to different cryptocurrencies
-        
+        // DYNAMIC SCALING: Calculate the appropriate scale based on the min/max of actual data
+        // with +/- 10% buffer as requested
         if (priceChart.data.datasets[0].data.length > 0) {
             const prices = priceChart.data.datasets[0].data;
-            const currentPrice = data.lastPrice; // Use the latest price
             
-            // Use a percentage range around the current price (±1.5%)
-            const rangePercent = 0.015; // 1.5% margin on top and bottom
+            // Find min and max prices in the current dataset
+            let minPrice = Number.MAX_VALUE;
+            let maxPrice = Number.MIN_VALUE;
             
-            // Ensure a minimum absolute range (different for different price magnitudes)
-            // For higher-priced assets like BTC, we want a wider range
-            // For lower-priced assets like ETH, we want a narrower range
-            let minAbsoluteRange;
-            
-            if (currentPrice > 50000) {         // BTC range (> $50,000)
-                minAbsoluteRange = 500;
-            } else if (currentPrice > 5000) {   // High-priced assets ($5,000-$50,000)
-                minAbsoluteRange = 100;
-            } else if (currentPrice > 1000) {   // Mid-priced assets ($1,000-$5,000)
-                minAbsoluteRange = 50;
-            } else if (currentPrice > 100) {    // Low-priced assets ($100-$1,000)
-                minAbsoluteRange = 10;
-            } else if (currentPrice > 10) {     // Very low-priced assets ($10-$100)
-                minAbsoluteRange = 5;
-            } else if (currentPrice > 1) {      // Micro-priced assets ($1-$10)
-                minAbsoluteRange = 1;
-            } else {                            // Sub-dollar assets (< $1)
-                minAbsoluteRange = 0.1;
+            for (const price of prices) {
+                if (price < minPrice) minPrice = price;
+                if (price > maxPrice) maxPrice = price;
             }
             
-            // Calculate percentage-based range
-            const percentRange = currentPrice * rangePercent;
+            // Calculate the range (difference between max and min)
+            const priceRange = maxPrice - minPrice;
             
-            // Use the larger of percentage-based range or absolute minimum range
-            const effectiveRange = Math.max(percentRange, minAbsoluteRange / 2);
+            // Add 10% buffer on both sides
+            const buffer = priceRange * 0.1;
             
-            // Calculate new min/max with the effective range
-            const newMin = Math.max(0, currentPrice - effectiveRange); // Never go below zero
-            const newMax = currentPrice + effectiveRange;
+            // Set min and max with buffer (ensuring min never goes below 0)
+            const newMin = Math.max(0, minPrice - buffer);
+            const newMax = maxPrice + buffer;
             
             // Apply the new scale to the chart
             priceChart.options.scales.y.min = newMin;
@@ -568,7 +543,6 @@ function updatePriceChart(data) {
         // Force Chart.js to respect our scale by disabling auto-scaling
         priceChart.options.scales.y.beginAtZero = false;
         priceChart.options.scales.y.grace = 0;
-        priceChart.options.scales.y.ticks.autoSkip = false;
         
         // Update the chart with animation disabled to prevent jumping
         priceChart.update({
