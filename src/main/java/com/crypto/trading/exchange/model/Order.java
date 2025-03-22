@@ -3,6 +3,8 @@ package com.crypto.trading.exchange.model;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Represents a cryptocurrency order with details like trading pair, type, amount, and price.
  * Enhanced with fee and tax tracking capabilities.
@@ -17,12 +19,26 @@ public class Order {
     private String status;
     private String exchange;
     private Double totalValue; // Portfolio value at the time of the order, used for backtesting
+    
+    @JsonProperty("fee")
     private double fee; // Exchange fee for the transaction
+    
+    @JsonProperty("tax")
     private double tax; // Estimated tax liability for the transaction
+    
+    @JsonProperty("feeRate")
     private double feeRate; // Fee rate applied to this order (e.g., 0.001 for 0.1%)
+    
+    @JsonProperty("taxRate")
     private double taxRate; // Tax rate applied to this order
+    
+    @JsonProperty("taxableGain")
     private double taxableGain; // Total taxable gain for this transaction
+    
+    @JsonProperty("shortTermGain")
     private double shortTermGain; // Short-term capital gain (held < 1 year)
+    
+    @JsonProperty("longTermGain")
     private double longTermGain; // Long-term capital gain (held >= 1 year)
 
     /**
@@ -325,6 +341,7 @@ public class Order {
     /**
      * The currency/asset in which the fee is denominated.
      */
+    @JsonProperty("feeAsset")
     private String feeAsset;
     
     /**
@@ -348,6 +365,7 @@ public class Order {
     /**
      * Estimated tax liability for this transaction.
      */
+    @JsonProperty("estimatedTaxLiability")
     private double estimatedTaxLiability;
     
     /**

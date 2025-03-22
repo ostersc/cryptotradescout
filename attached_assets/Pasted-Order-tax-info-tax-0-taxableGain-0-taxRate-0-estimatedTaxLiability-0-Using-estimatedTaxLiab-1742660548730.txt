@@ -1,0 +1,51 @@
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: -235.93746988631835, taxRate: 0.15, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0.7013466995498049, taxableGain: 4.675644663665366, taxRate: 0.15, estimatedTaxLiability: 8.506312206836384
+Using estimatedTaxLiability: 8.506312206836384
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 6.633271263977036, taxableGain: 44.221808426513576, taxRate: 0.15, estimatedTaxLiability: 9.458163733056612
+Using estimatedTaxLiability: 9.458163733056612
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Order tax info - tax: 7.490945348980016, taxableGain: 49.93963565986678, taxRate: 0.15, estimatedTaxLiability: 16.348606450394822
+Using estimatedTaxLiability: 16.348606450394822
+Order tax info - tax: 0, taxableGain: 0, taxRate: 0, estimatedTaxLiability: 0
+Using estimatedTaxLiability: 0
+Updating chart for BTC-USD (Kraken) with price: 84087.4
+Chart Y-axis adjusted: min=84003.31259999999, max=84171.4874, range=840.8739999999999, buffer=84.0874
+Fetching market data for Kraken BTC-USD
+Updating chart for BTC-USD (Kraken) with price: 84087.4
+Chart Y-axis adjusted: min=84003.31259999999, max=84171.4874, range=840.8739999999999, buffer=84.0874
+Fetching market data for Kraken BTC-USD
+Updating chart for BTC-USD (Kraken) with price: 84087.4
+Chart Y-axis adjusted: min=84003.31259999999, max=84171.4874, range=840.8739999999999, buffer=84.0874
+Fetching market data for Kraken BTC-USD
+Updating chart for BTC-USD (Kraken) with price: 84087.4
+Chart Y-axis adjusted: min=84003.31259999999, max=84171.4874, range=840.8739999999999, buffer=84.0874
+Fetching market data for Kraken BTC-USD
+Updating chart for BTC-USD (Kraken) with price: 84087.4
+Chart Y-axis adjusted: min=84003.31259999999, max=84171.4874, range=840.8739999999999, buffer=84.0874
+Fetching market data for Kraken BTC-USD
+Updating chart for BTC-USD (Kraken) with price: 84087.4
+Chart Y-axis adjusted: min=84003.31259999999, max=84171.4874, range=840.8739999999999, buffer=84.0874
+Fetching market data for Kraken BTC-USD
+Updating chart for BTC-USD (Kraken) with price: 84087.4
