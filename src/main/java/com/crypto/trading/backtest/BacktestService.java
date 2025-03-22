@@ -448,8 +448,50 @@ public class BacktestService {
         double sampleFeeRate = 0.002; // 0.2%
         double sampleTaxRate = 0.15; // 15% capital gains tax
         
-        double totalFees = tradingVolume * sampleFeeRate;
-        double totalTaxes = Math.max(0, totalProfit * sampleTaxRate); // Only tax profits
+        // Initialize total fees and taxes
+        double totalFees = 0.0;
+        double totalTaxes = 0.0;
+        
+        // Apply fee and tax rates to each individual order
+        for (Order order : generatedOrders) {
+            try {
+                // Set the fee rate and tax rate on the order
+                java.lang.reflect.Field feeRateField = order.getClass().getDeclaredField("feeRate");
+                feeRateField.setAccessible(true);
+                feeRateField.set(order, sampleFeeRate);
+                
+                java.lang.reflect.Field taxRateField = order.getClass().getDeclaredField("taxRate");
+                taxRateField.setAccessible(true);
+                taxRateField.set(order, sampleTaxRate);
+                
+                // Calculate and set the fee for this order
+                double orderValue = order.getAmount() * order.getPrice();
+                double orderFee = orderValue * sampleFeeRate;
+                
+                java.lang.reflect.Field feeField = order.getClass().getDeclaredField("fee");
+                feeField.setAccessible(true);
+                feeField.set(order, orderFee);
+                
+                // Simplified tax calculation - for sample data we'll apply tax to the order value 
+                // For SELL orders only to simulate capital gains
+                double orderTax = 0.0;
+                if (order.getType() == OrderType.SELL) {
+                    // Apply tax to a portion of the order value as "profit"
+                    double estimatedProfit = orderValue * 0.1; // Assume 10% of order value is profit
+                    orderTax = estimatedProfit * sampleTaxRate;
+                }
+                
+                java.lang.reflect.Field taxField = order.getClass().getDeclaredField("tax");
+                taxField.setAccessible(true);
+                taxField.set(order, orderTax);
+                
+                // Add to running totals
+                totalFees += orderFee;
+                totalTaxes += orderTax;
+            } catch (Exception e) {
+                logger.error("Error setting fee/tax values for sample order:", e);
+            }
+        }
         
         PerformanceMetrics metrics = new PerformanceMetrics(
                 totalProfit,
