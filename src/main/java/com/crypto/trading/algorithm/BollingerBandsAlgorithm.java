@@ -3,6 +3,7 @@ package com.crypto.trading.algorithm;
 import com.crypto.trading.exchange.model.MarketData;
 import com.crypto.trading.exchange.model.Order;
 import com.crypto.trading.exchange.model.OrderType;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
  * a lower band (middle band - standard deviation).
  * The bands expand and contract based on market volatility.
  */
+@Component
 public class BollingerBandsAlgorithm implements TradingAlgorithm {
     private static final String ALGORITHM_ID = "bollinger-bands";
     private static final String ALGORITHM_NAME = "Bollinger Bands";

@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
  * - Values above 70 generally considered overbought (indicating potential price reversal or correction)
  * - Values below 30 generally considered oversold (indicating potential price reversal or correction)
  */
+@Component
 public class RSIAlgorithm implements TradingAlgorithm {
     private static final String ALGORITHM_ID = "relative-strength-index";
     private static final String ALGORITHM_NAME = "Relative Strength Index (RSI)";
