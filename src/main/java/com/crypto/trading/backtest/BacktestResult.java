@@ -19,7 +19,7 @@ public class BacktestResult {
     private final List<Order> generatedOrders;
     private final long executionTimeMs;
     private final PerformanceMetrics metrics;
-    private final boolean isSimulatedData; // Flag to indicate if the data is simulated
+
 
     /**
      * Constructor for BacktestResult.
@@ -37,28 +37,6 @@ public class BacktestResult {
     public BacktestResult(String algorithmId, String exchange, String tradingPair,
                          LocalDateTime startTime, LocalDateTime endTime, double initialCapital,
                          List<Order> generatedOrders, long executionTimeMs, PerformanceMetrics metrics) {
-        this(algorithmId, exchange, tradingPair, startTime, endTime, initialCapital,
-             generatedOrders, executionTimeMs, metrics, false);
-    }
-    
-    /**
-     * Constructor for BacktestResult with simulated data flag.
-     *
-     * @param algorithmId the ID of the algorithm used
-     * @param exchange the exchange used in the backtest
-     * @param tradingPair the trading pair used in the backtest
-     * @param startTime the start time of the backtest period
-     * @param endTime the end time of the backtest period
-     * @param initialCapital the initial capital used in the backtest
-     * @param generatedOrders the orders generated during the backtest
-     * @param executionTimeMs the execution time of the backtest in milliseconds
-     * @param metrics the performance metrics calculated from the backtest
-     * @param isSimulatedData flag indicating if the data is simulated
-     */
-    public BacktestResult(String algorithmId, String exchange, String tradingPair,
-                         LocalDateTime startTime, LocalDateTime endTime, double initialCapital,
-                         List<Order> generatedOrders, long executionTimeMs, PerformanceMetrics metrics,
-                         boolean isSimulatedData) {
         this.algorithmId = algorithmId;
         this.exchange = exchange;
         this.tradingPair = tradingPair;
@@ -68,7 +46,6 @@ public class BacktestResult {
         this.generatedOrders = generatedOrders;
         this.executionTimeMs = executionTimeMs;
         this.metrics = metrics;
-        this.isSimulatedData = isSimulatedData;
     }
 
     /**
@@ -170,15 +147,6 @@ public class BacktestResult {
         return java.time.Duration.between(startTime, endTime).toDays();
     }
     
-    /**
-     * Check if the backtest data is simulated.
-     *
-     * @return true if the data is simulated, false otherwise
-     */
-    public boolean isSimulatedData() {
-        return isSimulatedData;
-    }
-
     @Override
     public String toString() {
         return "BacktestResult{" +
@@ -191,7 +159,6 @@ public class BacktestResult {
                 ", numberOfTrades=" + generatedOrders.size() +
                 ", executionTimeMs=" + executionTimeMs +
                 ", metrics=" + metrics +
-                ", isSimulatedData=" + isSimulatedData +
                 '}';
     }
 }
