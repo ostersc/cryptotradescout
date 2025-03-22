@@ -145,18 +145,24 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
             priceAboveBands = true;
             // For live trading, we'd need to look up the cost basis from a service
             // that tracks all buy orders. This is simplified for the demo.
-            double estimatedCostBasis = lastPrice * 0.95; // Simplified - assume 5% price movement
+            double costBasisPrice = lastPrice * 0.95; // Simplified - assume 5% price movement
             double amount = calculatePositionSize(currentPrice);
             double revenue = amount * currentPrice;
-            double fee = revenue * feeRate;
+            double sellFee = revenue * feeRate;
             
-            double totalCostBasis = amount * estimatedCostBasis;
+            // Calculate total cost basis (what you paid for the crypto originally)
+            double totalCostBasis = amount * costBasisPrice;
             double buyFee = totalCostBasis * feeRate;
             double totalBuyCost = totalCostBasis + buyFee;
             
-            // Calculate profit based on revenue vs. cost basis (including fees)
-            double profit = revenue - fee - totalBuyCost;
-            double tax = Math.max(0, profit * taxRate); // Only tax positive profits
+            // Calculate the gain (or loss) - this is revenue minus what you paid
+            double gain = revenue - totalCostBasis;
+            
+            // Calculate the net gain after fees
+            double netGain = gain - sellFee - buyFee;
+            
+            // Tax is only applied to the gain portion, not the entire amount!
+            double tax = Math.max(0, netGain * taxRate); // Only tax positive gains
             
             Order sellOrder = new Order(
                     marketData.getTradingPair(),
@@ -166,7 +172,7 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                     feeRate,
                     taxRate
             );
-            sellOrder.setTaxableGain(profit);
+            sellOrder.setTaxableGain(netGain);
             sellOrder.setEstimatedTaxLiability(tax);
             lastPrice = currentPrice;
             return Mono.just(sellOrder);
@@ -269,30 +275,36 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                 if (cryptoHoldings > 0) {
                     double amount = cryptoHoldings;
                     double revenue = amount * price;
-                    double fee = revenue * feeRate;
+                    double sellFee = revenue * feeRate;
                     
                     // Calculate the cost basis from the previous buy order
                     // For simplicity, we're using the last known buy price as the cost basis
                     // In a real implementation, you'd use a proper FIFO queue of buy prices
-                    double costBasis = 0.0;
+                    double costBasisPrice = 0.0;
                     for (Order previousOrder : orders) {
                         if (previousOrder.getType() == OrderType.BUY) {
-                            costBasis = previousOrder.getPrice();
+                            costBasisPrice = previousOrder.getPrice();
                         }
                     }
                     
                     // If we can't find a previous buy order, fallback to the last price
-                    if (costBasis == 0.0) {
-                        costBasis = lastPrice;
+                    if (costBasisPrice == 0.0) {
+                        costBasisPrice = lastPrice;
                     }
                     
-                    double totalCostBasis = amount * costBasis;
+                    // Calculate total cost basis (what you paid for the crypto originally)
+                    double totalCostBasis = amount * costBasisPrice;
                     double buyFee = totalCostBasis * feeRate;
                     double totalBuyCost = totalCostBasis + buyFee;
                     
-                    // Calculate profit based on revenue vs. cost basis (including fees)
-                    double profit = revenue - fee - totalBuyCost;
-                    double tax = Math.max(0, profit * taxRate); // Only tax positive profits
+                    // Calculate the gain (or loss) - this is revenue minus what you paid
+                    double gain = revenue - totalCostBasis;
+                    
+                    // Calculate the net gain after fees
+                    double netGain = gain - sellFee - buyFee;
+                    
+                    // Tax is only applied to the gain portion, not the entire amount!
+                    double tax = Math.max(0, netGain * taxRate); // Only tax positive gains
                     
                     Order sellOrder = new Order(
                             data.getTradingPair(),
@@ -302,14 +314,14 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                             feeRate,
                             taxRate
                     );
-                    sellOrder.setTaxableGain(profit); // Set the taxable gain
+                    sellOrder.setTaxableGain(netGain); // Set the taxable gain
                     sellOrder.setEstimatedTaxLiability(tax); // Set the estimated tax liability
                     sellOrder.setCreatedAt(data.getTimestamp());
                     sellOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
                     sellOrder.setExchange(data.getExchange());
                     
                     // Update portfolio
-                    availableCapital += (revenue - fee - tax);
+                    availableCapital += (revenue - sellFee - tax);
                     cryptoHoldings = 0;
                     
                     // Track total portfolio value at order time
