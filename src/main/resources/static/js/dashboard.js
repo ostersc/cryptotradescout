@@ -283,7 +283,10 @@ function initializePriceChart() {
                             callback: function(value) {
                                 return formatCurrency(value);
                             }
-                        }
+                        },
+                        // Setting a minimum range for the y-axis to avoid tiny variations appearing dramatic
+                        grace: '5%', // Add 5% padding on both ends
+                        // We'll manage min/max dynamically in update function
                     }
                 }
             }
@@ -430,7 +433,12 @@ function updatePriceChart(data) {
     
     try {
         // Add new data point to chart
-        const timestamp = new Date(data.timestamp).toLocaleTimeString();
+        const timestamp = new Date(data.timestamp).toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false // 24-hour time format
+        });
         
         priceChart.data.labels.push(timestamp);
         priceChart.data.datasets[0].data.push(data.lastPrice);
@@ -439,6 +447,33 @@ function updatePriceChart(data) {
         if (priceChart.data.labels.length > 20) {
             priceChart.data.labels.shift();
             priceChart.data.datasets[0].data.shift();
+        }
+        
+        // Dynamically calculate min/max for better y-axis scaling
+        if (priceChart.data.datasets[0].data.length > 1) {
+            const prices = priceChart.data.datasets[0].data;
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            
+            // Ensure there's at least a 1% range even if the price is stable
+            const rangeNeeded = Math.max(max * 0.01, 500); // At least 1% or $500 for BTC
+            
+            // Only update Y axis if the range isn't sufficient or if it's too large
+            if (priceChart.options.scales.y.min === undefined || 
+                priceChart.options.scales.y.max === undefined ||
+                priceChart.options.scales.y.min > min * 0.995 ||
+                priceChart.options.scales.y.max < max * 1.005) {
+                
+                priceChart.options.scales.y.min = min * 0.995;  // 0.5% buffer below
+                priceChart.options.scales.y.max = max * 1.005;  // 0.5% buffer above
+                
+                // Ensure minimum range
+                if (priceChart.options.scales.y.max - priceChart.options.scales.y.min < rangeNeeded) {
+                    const middle = (priceChart.options.scales.y.max + priceChart.options.scales.y.min) / 2;
+                    priceChart.options.scales.y.min = middle - (rangeNeeded / 2);
+                    priceChart.options.scales.y.max = middle + (rangeNeeded / 2);
+                }
+            }
         }
         
         // Update chart
@@ -665,7 +700,17 @@ function formatTimestamp(timestamp) {
     if (!timestamp) return '-';
     
     const date = new Date(timestamp);
-    return date.toLocaleString();
+    // Using toLocaleString with appropriate options ensures browser's timezone is used
+    return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false, // Use 24-hour format
+        timeZoneName: 'short' // Show timezone abbreviation
+    });
 }
 
 /**
