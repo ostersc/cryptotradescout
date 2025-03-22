@@ -1131,12 +1131,37 @@ function displayTrades(orders, results) {
         
         if (!orders || orders.length === 0) {
             const row = document.createElement('tr');
-            row.innerHTML = '<td colspan="7" class="text-center">No trades executed</td>';
+            row.innerHTML = '<td colspan="11" class="text-center">No trades executed</td>';
             tradesTable.appendChild(row);
             return;
         }
         
-        // Add each trade to the table
+        // Update the header to include the new portfolio metrics columns
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `
+            <th>Date & Time</th>
+            <th>Type</th>
+            <th>Price</th>
+            <th>Amount</th>
+            <th>Trade Value</th>
+            <th>Fee</th>
+            <th>Tax</th>
+            <th>Cash</th>
+            <th>Crypto Value</th>
+            <th>Total Value</th>
+            <th>Return</th>
+        `;
+        tradesTable.appendChild(headerRow);
+        
+        // Initialize tracking variables for portfolio metrics
+        const initialCapital = results.initialCapital || 10000;
+        let availableCash = initialCapital;
+        let cryptoHoldings = 0;
+        let cumulativeFees = 0;
+        let cumulativeTaxes = 0;
+        let cumulativeGainLoss = 0;
+        
+        // Add each trade to the table with cumulative metrics
         orders.forEach(order => {
             const row = document.createElement('tr');
             const createdAt = order.createdAt ? new Date(order.createdAt).toLocaleString() : 'Unknown';
@@ -1148,22 +1173,16 @@ function displayTrades(orders, results) {
             // Get the tax value for this order, prioritizing certain fields
             let tax = 0;
             
-            // Log tax-related fields for debugging
-            console.log(`Order tax info - tax: ${order.tax}, taxableGain: ${order.taxableGain}, taxRate: ${order.taxRate}, estimatedTaxLiability: ${order.estimatedTaxLiability}`);
-            
             // First try to get estimatedTaxLiability (from the backend)
             if (typeof order.estimatedTaxLiability !== 'undefined') {
-                console.log(`Using estimatedTaxLiability: ${order.estimatedTaxLiability}`);
                 tax = order.estimatedTaxLiability;
             } 
             // Directly use the tax field if present - this is set by the backend
             else if (typeof order.tax !== 'undefined') {
-                console.log(`Using tax field: ${order.tax}`);
                 tax = order.tax;
             }
             // Then try to get taxableGain (if present) - should be a fallback
             else if (typeof order.taxableGain !== 'undefined' && typeof order.taxRate !== 'undefined') {
-                console.log(`Calculating tax from taxableGain: ${order.taxableGain} * ${order.taxRate}`);
                 // Only apply tax on positive gains
                 if (order.taxableGain > 0) {
                     tax = order.taxableGain * order.taxRate;
@@ -1171,6 +1190,33 @@ function displayTrades(orders, results) {
                     tax = 0; // No tax on losses
                 }
             }
+            
+            // Update cumulative metrics based on order type
+            if (type.toUpperCase() === 'BUY') {
+                // For BUY orders
+                const totalCost = (price * amount) + fee;
+                availableCash -= totalCost;
+                cryptoHoldings += amount;
+                cumulativeFees += fee;
+                cumulativeTaxes += (tax > 0 ? tax : 0);
+            } else if (type.toUpperCase() === 'SELL') {
+                // For SELL orders
+                const proceeds = (price * amount) - fee;
+                availableCash += proceeds;
+                cryptoHoldings -= amount;
+                cumulativeFees += fee;
+                cumulativeTaxes += (tax > 0 ? tax : 0);
+                
+                // Update capital gain/loss
+                if (order.taxableGain) {
+                    cumulativeGainLoss += order.taxableGain;
+                }
+            }
+            
+            // Calculate current portfolio value
+            const cryptoValue = cryptoHoldings * price;
+            const totalPortfolioValue = availableCash + cryptoValue;
+            const returnPercent = ((totalPortfolioValue / initialCapital) - 1) * 100;
             
             // Highlight buy/sell with different colors
             const typeClass = type.toUpperCase() === 'BUY' ? 'text-success' : 'text-danger';
@@ -1187,6 +1233,7 @@ function displayTrades(orders, results) {
                 taxDisplay = '$0.00';
             }
             
+            // Create the row with all trade and portfolio information
             row.innerHTML = `
                 <td>${createdAt}</td>
                 <td class="${typeClass}">${type}</td>
@@ -1195,6 +1242,10 @@ function displayTrades(orders, results) {
                 <td>${formatCurrency(price * amount)}</td>
                 <td>${formatCurrency(fee)}</td>
                 <td>${taxDisplay}</td>
+                <td>${formatCurrency(availableCash)}</td>
+                <td>${formatCurrency(cryptoValue)}</td>
+                <td>${formatCurrency(totalPortfolioValue)}</td>
+                <td class="${returnPercent >= 0 ? 'text-success' : 'text-danger'}">${returnPercent >= 0 ? '+' : ''}${returnPercent.toFixed(2)}%</td>
             `;
             
             tradesTable.appendChild(row);
