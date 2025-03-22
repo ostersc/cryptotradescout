@@ -4,28 +4,33 @@
 
 /**
  * Loads the algorithms from the API and displays them
+ * @returns {Promise} A promise that resolves when algorithms are loaded
  */
 function loadAlgorithms() {
-    try {
-        console.log('Loading algorithms...');
-        
-        // First try to fetch from the API
-        fetch('/api/algorithms')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(algorithms => {
-                displayAlgorithms(algorithms);
-                populateAlgorithmDropdowns(algorithms);
-            })
-            .catch(error => {
-                console.error('Error fetching algorithms from API, using sample data:', error);
-                
-                // Use sample data if API fails
-                const sampleAlgorithms = [
+    console.log('Loading algorithms...');
+    
+    // Return a promise so we can chain with .then()
+    return new Promise((resolve, reject) => {
+        try {
+            // First try to fetch from the API
+            fetch('/api/algorithms')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(algorithms => {
+                    displayAlgorithms(algorithms);
+                    populateAlgorithmDropdowns(algorithms);
+                    console.log('Algorithms loaded successfully:', algorithms.length);
+                    resolve(algorithms); // Resolve the promise with the algorithms
+                })
+                .catch(error => {
+                    console.error('Error fetching algorithms from API, using sample data:', error);
+                    
+                    // Use sample data if API fails
+                    const sampleAlgorithms = [
                     {
                         id: 'simple-moving-average',
                         name: 'Simple Moving Average Crossover',
@@ -48,10 +53,14 @@ function loadAlgorithms() {
                 
                 displayAlgorithms(sampleAlgorithms);
                 populateAlgorithmDropdowns(sampleAlgorithms);
+                console.log('Loaded sample algorithms as fallback');
+                resolve(sampleAlgorithms); // Resolve the promise with sample algorithms
             });
-    } catch (error) {
-        console.error('Critical error in loadAlgorithms:', error);
-    }
+        } catch (error) {
+            console.error('Critical error in loadAlgorithms:', error);
+            reject(error); // Reject the promise if there's a critical error
+        }
+    });
 }
 
 /**

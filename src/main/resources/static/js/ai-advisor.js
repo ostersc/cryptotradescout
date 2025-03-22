@@ -59,23 +59,121 @@ function getAIRecommendations() {
             })
             .then(data => {
                 console.log('AI analysis received:', data);
+                
+                // Store the recommended parameters for each algorithm in the global variable
+                if (data.algorithmSuggestions && data.algorithmSuggestions.length > 0) {
+                    data.algorithmSuggestions.forEach(suggestion => {
+                        if (suggestion.algorithmId && suggestion.recommendedParameters) {
+                            recommendedAlgorithmParameters[suggestion.algorithmId] = suggestion.recommendedParameters;
+                        }
+                    });
+                }
+                
                 displayAIAnalysis(data);
             })
             .catch(error => {
                 console.error('Error fetching AI recommendations:', error);
                 loadingElement.classList.add('d-none');
-                noResultsElement.classList.remove('d-none');
                 
-                // Show error message
-                noResultsElement.innerHTML = `
-                    <div class="alert alert-danger">
-                        <strong>Error:</strong> Could not get AI recommendations. ${error.message}
-                    </div>
-                `;
+                // For testing purposes, generate sample recommendations data with valid parameters
+                if (confirm('Could not fetch AI recommendations from server. Would you like to use sample data for testing?')) {
+                    const sampleData = generateSampleAIRecommendations(exchange, tradingPair);
+                    console.log('Using sample AI recommendations for testing:', sampleData);
+                    
+                    // Store the sample recommended parameters for each algorithm
+                    if (sampleData.algorithmSuggestions && sampleData.algorithmSuggestions.length > 0) {
+                        sampleData.algorithmSuggestions.forEach(suggestion => {
+                            if (suggestion.algorithmId && suggestion.recommendedParameters) {
+                                recommendedAlgorithmParameters[suggestion.algorithmId] = suggestion.recommendedParameters;
+                                console.log(`Stored sample parameters for ${suggestion.algorithmId}:`, suggestion.recommendedParameters);
+                            }
+                        });
+                    }
+                    
+                    displayAIAnalysis(sampleData);
+                } else {
+                    noResultsElement.classList.remove('d-none');
+                    
+                    // Show error message
+                    noResultsElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> Could not get AI recommendations. ${error.message}
+                        </div>
+                    `;
+                }
             });
     } catch (error) {
         console.error('Error in getAIRecommendations:', error);
     }
+}
+
+/**
+ * Generates sample AI recommendations for testing
+ * 
+ * @param {string} exchange - Exchange name
+ * @param {string} tradingPair - Trading pair
+ * @returns {Object} Sample AI recommendation data
+ */
+function generateSampleAIRecommendations(exchange, tradingPair) {
+    const now = new Date();
+    
+    // Sample algorithm suggestions with valid parameters
+    const algorithmSuggestions = [
+        {
+            algorithmId: 'simple-moving-average',
+            algorithmName: 'Simple Moving Average Crossover',
+            confidenceScore: 8.5,
+            expectedReturnPercent: 4.2,
+            reasoning: 'This trading pair is showing consistent trends with moderate volatility, making an SMA crossover strategy effective.',
+            recommendedParameters: {
+                shortPeriod: 5,
+                longPeriod: 20,
+                positionSize: 10,
+                feeRate: 0.2,
+                taxRate: 15
+            }
+        },
+        {
+            algorithmId: 'bollinger-bands',
+            algorithmName: 'Bollinger Bands',
+            confidenceScore: 7.8,
+            expectedReturnPercent: 3.5,
+            reasoning: 'The market is showing mean-reverting behavior with periodic overshoots, making Bollinger Bands a good strategy.',
+            recommendedParameters: {
+                period: 20,
+                standardDeviation: 2.0,
+                positionSize: 10,
+                feeRate: 0.2,
+                taxRate: 15
+            }
+        },
+        {
+            algorithmId: 'relative-strength-index',
+            algorithmName: 'RSI (Relative Strength Index)',
+            confidenceScore: 6.9,
+            expectedReturnPercent: 2.8,
+            reasoning: 'The market is showing periodic overbought and oversold conditions that can be captured by RSI.',
+            recommendedParameters: {
+                period: 14,
+                overboughtThreshold: 70,
+                oversoldThreshold: 30,
+                positionSize: 10,
+                feeRate: 0.2,
+                taxRate: 15
+            }
+        }
+    ];
+    
+    return {
+        exchange: exchange,
+        tradingPair: tradingPair,
+        timestamp: now.toISOString(),
+        marketTrend: 'Bullish',
+        marketSentiment: 'Positive',
+        volatilityScore: 6.5,
+        analysisExplanation: 'The market is showing strong bullish momentum with moderate volatility. Technical indicators suggest a continuation of the uptrend in the short term.',
+        algorithmSuggestions: algorithmSuggestions
+    };
 }
 
 /**
