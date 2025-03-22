@@ -38,96 +38,19 @@ public class BacktestController {
     }
     
     /**
-     * Run a backtest with the specified parameters.
+     * Run a backtest with the specified parameters (endpoint removed to simplify API).
+     * All functionality has been consolidated into the root endpoint.
      * 
-     * @param backtestRequest the backtest parameters
-     * @return a ResponseEntity containing the backtest results
+     * This method is kept as a placeholder to indicate that this endpoint was 
+     * intentionally removed as part of code simplification.
      */
     @PostMapping("/run")
-    public Mono<ResponseEntity<BacktestResult>> runBacktest(
-            @RequestBody Map<String, Object> backtestRequest) {
-        
-        try {
-            String algorithmId = (String) backtestRequest.get("algorithmId");
-            String exchange = (String) backtestRequest.get("exchange");
-            String tradingPair = (String) backtestRequest.get("tradingPair");
-            
-            // Validate required string parameters
-            if (algorithmId == null || exchange == null || tradingPair == null) {
-                return Mono.just(ResponseEntity.badRequest().build());
-            }
-            
-            // Get the algorithm
-            if (!algorithmRegistry.hasAlgorithm(algorithmId)) {
-                logger.error("Algorithm not found: {}", algorithmId);
-                return Mono.just(ResponseEntity.badRequest().build());
-            }
-            
-            TradingAlgorithm algorithm = algorithmRegistry.getAlgorithm(algorithmId);
-            
-            // Parse dates
-            LocalDateTime startTime;
-            LocalDateTime endTime;
-            
-            try {
-                String startTimeStr = (String) backtestRequest.get("startTime");
-                String endTimeStr = (String) backtestRequest.get("endTime");
-                
-                if (startTimeStr == null || endTimeStr == null) {
-                    return Mono.just(ResponseEntity.badRequest().build());
-                }
-                
-                startTime = LocalDateTime.parse(startTimeStr);
-                endTime = LocalDateTime.parse(endTimeStr);
-            } catch (Exception e) {
-                logger.error("Error parsing dates", e);
-                return Mono.just(ResponseEntity.badRequest().build());
-            }
-            
-            // Get initial capital
-            double initialCapital = 10000.0; // Default
-            if (backtestRequest.containsKey("initialCapital")) {
-                try {
-                    initialCapital = ((Number) backtestRequest.get("initialCapital")).doubleValue();
-                } catch (Exception e) {
-                    logger.error("Error parsing initialCapital", e);
-                    return Mono.just(ResponseEntity.badRequest().build());
-                }
-            }
-            
-            // Get algorithm parameters
-            @SuppressWarnings("unchecked")
-            Map<String, Object> algorithmParams = 
-                    (Map<String, Object>) backtestRequest.get("algorithmParams");
-            
-            if (algorithmParams == null) {
-                algorithmParams = Map.of(); // Empty map if not provided
-            }
-            
-            // Validate algorithm parameters
-            if (!algorithm.validateParameters(algorithmParams)) {
-                logger.error("Invalid algorithm parameters: {}", algorithmParams);
-                return Mono.just(ResponseEntity.badRequest().build());
-            }
-            
-            logger.info("Starting backtest for algorithm {} on {} {} from {} to {}",
-                    algorithmId, exchange, tradingPair, startTime, endTime);
-            
-            // Run the backtest
-            return backtestService.runBacktest(
-                    algorithm, exchange, tradingPair, startTime, endTime, 
-                    initialCapital, algorithmParams)
-                    .map(ResponseEntity::ok)
-                    .defaultIfEmpty(ResponseEntity.notFound().build())
-                    .onErrorResume(e -> {
-                        logger.error("Error running backtest", e);
-                        return Mono.just(ResponseEntity.badRequest().build());
-                    });
-                    
-        } catch (Exception e) {
-            logger.error("Error processing backtest request", e);
-            return Mono.just(ResponseEntity.badRequest().build());
-        }
+    public Mono<ResponseEntity<String>> removedEndpoint() {
+        logger.warn("The /run endpoint has been removed. Please use the root endpoint (/api/backtest) instead.");
+        return Mono.just(ResponseEntity
+                .status(301)
+                .header("Location", "/api/backtest")
+                .body("This endpoint has been deprecated. Please use /api/backtest instead."));
     }
     
     /**
@@ -177,14 +100,13 @@ public class BacktestController {
     }
     
     /**
-     * Alternative endpoint for running a backtest (without the /run suffix).
-     * This is to provide compatibility with different frontend client implementations.
+     * Primary endpoint for running a backtest with the specified parameters.
      * 
      * @param backtestRequest the backtest parameters
      * @return a ResponseEntity containing the backtest results
      */
     @PostMapping("")
-    public Mono<ResponseEntity<BacktestResult>> runBacktestAlternate(
+    public Mono<ResponseEntity<BacktestResult>> runBacktest(
             @RequestBody Map<String, Object> backtestRequest) {
         
         try {
@@ -273,7 +195,7 @@ public class BacktestController {
                 algorithmParams = Map.of(); // Use defaults
             }
             
-            logger.info("Starting backtest (alternative endpoint) for algorithm {} on {} {} from {} to {}",
+            logger.info("Starting backtest for algorithm {} on {} {} from {} to {}",
                     algorithmId, exchange, tradingPair, startTime, endTime);
             
             // Run the backtest
