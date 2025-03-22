@@ -491,37 +491,51 @@ function updatePriceChart(data) {
         const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
         const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
         
-        // If trading pair changed, reset chart and set initial scale
+        // If trading pair changed, reset chart and add initial point
         const currentChartLabel = `${currentPair} (${currentExchange})`;
         if (priceChart.data.datasets[0].label !== currentChartLabel) {
-            // Save the incoming data point so we don't lose it
-            const currentPrice = data.lastPrice;
-            const currentTime = new Date();
-            const localTimeString = formatTimestamp(currentTime);
+            console.log(`Switching chart from ${priceChart.data.datasets[0].label} to ${currentChartLabel}`);
             
-            // Reset chart data and immediately add the first point
-            priceChart.data.labels = [localTimeString];
-            priceChart.data.datasets[0].data = [currentPrice];
-            priceChart.data.datasets[0].label = currentChartLabel;
+            // Save the incoming data point
+            const currentPrice = data.lastPrice;
+            
+            // Format time for display (simple format for chart points)
+            const now = new Date();
+            const timeString = now.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            // Create new dataset rather than clearing the old one
+            priceChart.data = {
+                labels: [timeString],
+                datasets: [{
+                    label: currentChartLabel,
+                    data: [currentPrice],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 3
+                }]
+            };
             
             // Update chart title
             priceChart.options.plugins.title.text = `${currentPair} Price (${currentExchange})`;
             
-            // Set initial scale for the new cryptocurrency with 10% buffer
-            // This ensures the chart has a scale even with just one data point
-            const buffer = currentPrice * 0.01; // 1% for initial scale
+            // Set initial scale with buffer
+            const buffer = currentPrice * 0.02; // 2% buffer 
             priceChart.options.scales.y.min = Math.max(0, currentPrice - buffer);
             priceChart.options.scales.y.max = currentPrice + buffer;
             
-            // Force an immediate update to display the first data point
-            priceChart.update({
-                duration: 0,
-                easing: 'linear'
-            });
+            // Force immediate update to show the first point
+            priceChart.update('none'); // Use 'none' mode for instant update with no animation
             
-            console.log(`Resetting chart for ${currentChartLabel} with initial price: ${currentPrice}`);
+            console.log(`Chart reset for ${currentChartLabel} with initial price: ${currentPrice}`);
             
-            // Since we've already added the data point, return to avoid adding it twice
+            // Skip adding the point twice
             return;
         }
         
