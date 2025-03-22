@@ -236,9 +236,15 @@ function initializePriceChart() {
         };
         
         // Initialize the chart using the chart manager module
-        window.createPriceChart('price-chart', initialData, currentPair, currentExchange);
+        // Use ChartManager namespace to avoid conflicts
+        if (typeof ChartManager !== 'undefined' && typeof ChartManager.createPriceChart === 'function') {
+            ChartManager.createPriceChart('price-chart', initialData, currentPair, currentExchange);
+            console.log('Price chart initialized successfully with ChartManager');
+        } else {
+            console.error('ChartManager not found or createPriceChart function not available');
+        }
         
-        console.log('Price chart initialized successfully');
+        console.log('Price chart initialization attempt completed');
     } catch (error) {
         console.error('Error initializing price chart:', error);
     }
@@ -354,7 +360,7 @@ function updateMarketDataDisplay(data) {
     timestampElement.textContent = formatTimestamp(data.timestamp);
     
     // Update chart
-    updatePriceChart(data);
+    dashboardUpdatePriceChart(data);
     
     // Update last update time - create Date object in local time zone
     lastUpdateTime = new Date();
@@ -378,7 +384,7 @@ function updateMarketDataDisplay(data) {
  * 
  * @param {Object} data - The market data object
  */
-function updatePriceChart(data) {
+function dashboardUpdatePriceChart(data) {
     if (!data) {
         console.error('Cannot update price chart: missing data');
         return;
@@ -391,10 +397,14 @@ function updatePriceChart(data) {
         const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
         const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
         
-        // Use the chart manager to update the chart
-        // This will handle creating a new chart if the pair or exchange has changed
-        // We're calling the chart-manager's updatePriceChart function here
-        window.updatePriceChart(data, currentPair, currentExchange);
+        // Use the chart manager functions through namespace
+        console.log(`Updating chart for ${currentPair} (${currentExchange}) with price: ${data.lastPrice}`);
+        // Use the ChartManager namespace
+        if (typeof ChartManager !== 'undefined' && typeof ChartManager.updatePriceChart === 'function') {
+            ChartManager.updatePriceChart(data, currentPair, currentExchange);
+        } else {
+            console.error('ChartManager not found or updatePriceChart function not available');
+        }
         
     } catch (error) {
         console.error('Error updating price chart:', error);
@@ -406,9 +416,21 @@ function updatePriceChart(data) {
             const currentPair = pairSelector ? pairSelector.value : 'BTC-USD';
             const currentExchange = exchangeSelector ? exchangeSelector.value : 'Kraken';
             
-            // Recreate chart completely
-            destroyChart();
-            createPriceChart('price-chart', data, currentPair, currentExchange);
+            // Recreate chart completely - use ChartManager namespace
+            console.log('Attempting chart recovery');
+            if (typeof ChartManager !== 'undefined') {
+                if (typeof ChartManager.destroyChart === 'function') {
+                    ChartManager.destroyChart();
+                }
+                if (typeof ChartManager.createPriceChart === 'function') {
+                    ChartManager.createPriceChart('price-chart', data, currentPair, currentExchange);
+                    console.log('Chart recovery successful via ChartManager');
+                } else {
+                    console.error('ChartManager.createPriceChart function not found');
+                }
+            } else {
+                console.error('ChartManager namespace not found');
+            }
         } catch (recoveryError) {
             console.error('Failed to recover chart after error:', recoveryError);
         }
