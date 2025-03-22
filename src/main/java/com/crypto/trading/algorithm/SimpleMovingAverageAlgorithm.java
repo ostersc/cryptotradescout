@@ -353,13 +353,14 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
                         generatedOrders.add(order);
                         
                         // Update holdings - we include the tax liability in our model to be realistic
-                        // For portfolio purposes, use the cumulative tax (more accurate)
-                        currentCapital += netProceeds - cumulativeTax;
+                        // For portfolio purposes, use the individual trade tax (to match display)
+                        // Using the cumulative tax was causing discrepancies in returns calculation
+                        currentCapital += netProceeds - individualTax;
                         cryptoHoldings = 0;
                         
-                        logger.debug("Backtest SELL: {} {} at price {} - Fee: {}, Tax: {}, Net: {}, Capital: {}", 
+                        logger.debug("Backtest SELL: {} {} at price {} - Fee: {}, indivTax: {}, cumTax: {}, Net: {}, Capital: {}", 
                                 order.getAmount(), data.getTradingPair().split("-")[0], 
-                                data.getLastPrice(), fee, individualTax, netProceeds - individualTax, 
+                                data.getLastPrice(), fee, individualTax, cumulativeTax, netProceeds - individualTax, 
                                 currentCapital);
                     }
                 }
