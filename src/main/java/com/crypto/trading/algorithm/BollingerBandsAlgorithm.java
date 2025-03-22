@@ -143,14 +143,31 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
         // Sell signal: Price crossing below the upper band from above
         if (lastPrice >= upperBand && currentPrice < upperBand && !priceAboveBands) {
             priceAboveBands = true;
+            // For live trading, we'd need to look up the cost basis from a service
+            // that tracks all buy orders. This is simplified for the demo.
+            double estimatedCostBasis = lastPrice * 0.95; // Simplified - assume 5% price movement
+            double amount = calculatePositionSize(currentPrice);
+            double revenue = amount * currentPrice;
+            double fee = revenue * feeRate;
+            
+            double totalCostBasis = amount * estimatedCostBasis;
+            double buyFee = totalCostBasis * feeRate;
+            double totalBuyCost = totalCostBasis + buyFee;
+            
+            // Calculate profit based on revenue vs. cost basis (including fees)
+            double profit = revenue - fee - totalBuyCost;
+            double tax = Math.max(0, profit * taxRate); // Only tax positive profits
+            
             Order sellOrder = new Order(
                     marketData.getTradingPair(),
                     OrderType.SELL,
-                    calculatePositionSize(currentPrice),
+                    amount,
                     currentPrice,
                     feeRate,
                     taxRate
             );
+            sellOrder.setTaxableGain(profit);
+            sellOrder.setEstimatedTaxLiability(tax);
             lastPrice = currentPrice;
             return Mono.just(sellOrder);
         }
@@ -224,11 +241,12 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                                 amount,
                                 price,
                                 feeRate,
-                                taxRate
+                                0.0  // No tax on buy orders, only establish cost basis
                         );
                         buyOrder.setCreatedAt(data.getTimestamp());
                         buyOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
                         buyOrder.setExchange(data.getExchange());
+                        buyOrder.setEstimatedTaxLiability(0); // Explicitly set tax to 0 for buys
                         
                         // Update portfolio
                         availableCapital -= (cost + fee);
@@ -252,7 +270,28 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                     double amount = cryptoHoldings;
                     double revenue = amount * price;
                     double fee = revenue * feeRate;
-                    double profit = revenue - fee - (amount * lastPrice * (1 + feeRate)); // Profit after fees
+                    
+                    // Calculate the cost basis from the previous buy order
+                    // For simplicity, we're using the last known buy price as the cost basis
+                    // In a real implementation, you'd use a proper FIFO queue of buy prices
+                    double costBasis = 0.0;
+                    for (Order previousOrder : orders) {
+                        if (previousOrder.getType() == OrderType.BUY) {
+                            costBasis = previousOrder.getPrice();
+                        }
+                    }
+                    
+                    // If we can't find a previous buy order, fallback to the last price
+                    if (costBasis == 0.0) {
+                        costBasis = lastPrice;
+                    }
+                    
+                    double totalCostBasis = amount * costBasis;
+                    double buyFee = totalCostBasis * feeRate;
+                    double totalBuyCost = totalCostBasis + buyFee;
+                    
+                    // Calculate profit based on revenue vs. cost basis (including fees)
+                    double profit = revenue - fee - totalBuyCost;
                     double tax = Math.max(0, profit * taxRate); // Only tax positive profits
                     
                     Order sellOrder = new Order(
@@ -263,6 +302,8 @@ public class BollingerBandsAlgorithm implements TradingAlgorithm {
                             feeRate,
                             taxRate
                     );
+                    sellOrder.setTaxableGain(profit); // Set the taxable gain
+                    sellOrder.setEstimatedTaxLiability(tax); // Set the estimated tax liability
                     sellOrder.setCreatedAt(data.getTimestamp());
                     sellOrder.setStatus("FILLED"); // Important: Set status to avoid NPE
                     sellOrder.setExchange(data.getExchange());
