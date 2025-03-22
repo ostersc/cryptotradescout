@@ -23,6 +23,7 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
     private int shortPeriod = 10;
     private int longPeriod = 30;
     private double tradeAmount = 0.01; // Default amount to trade
+    private double maxSlippage = 0.5; // Default max slippage in percentage
     private final Queue<MarketData> dataWindow = new LinkedList<>();
     private boolean lastCrossover = false; // false = below, true = above
     
@@ -69,6 +70,10 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
             this.tradeAmount = (double) parameters.get("tradeAmount");
         }
         
+        if (parameters.containsKey("maxSlippage")) {
+            this.maxSlippage = (double) parameters.get("maxSlippage");
+        }
+        
         // Validate that short period is less than long period
         if (shortPeriod >= longPeriod) {
             throw new IllegalArgumentException("Short period must be less than long period");
@@ -77,8 +82,8 @@ public class SimpleMovingAverageAlgorithm implements TradingAlgorithm {
         // Clear the data window
         dataWindow.clear();
         
-        logger.info("Initialized SimpleMovingAverageAlgorithm with shortPeriod={}, longPeriod={}, tradeAmount={}",
-                shortPeriod, longPeriod, tradeAmount);
+        logger.info("Initialized SimpleMovingAverageAlgorithm with shortPeriod={}, longPeriod={}, tradeAmount={}, maxSlippage={}",
+                shortPeriod, longPeriod, tradeAmount, maxSlippage);
     }
     
     /**
