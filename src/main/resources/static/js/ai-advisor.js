@@ -498,10 +498,7 @@ function applyParametersToInputs(inputElements, params, algorithmId) {
         console.error('Error saving to localStorage:', error);
     }
     
-    if (parameterCount > 0) {
-        // Show a confirmation alert
-        alert(`Parameters for ${algorithmId} have been set. You can now start live trading with these optimized parameters.`);
-    } else {
+    if (parameterCount <= 0) {
         console.error('No parameters were set. Parameter names may not match.');
         alert('Could not set parameters. Please manually set your parameters.');
     }
