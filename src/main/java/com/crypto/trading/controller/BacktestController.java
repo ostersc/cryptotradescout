@@ -13,6 +13,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +31,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/backtest")
+@Tag(name = "Backtesting", description = "API for backtesting trading algorithms with historical data")
 public class BacktestController {
     private static final Logger logger = LoggerFactory.getLogger(BacktestController.class);
     
@@ -47,6 +56,17 @@ public class BacktestController {
      * This method is kept as a placeholder to indicate that this endpoint was 
      * intentionally removed as part of code simplification.
      */
+    @Operation(
+        summary = "Deprecated backtest endpoint",
+        description = "This endpoint has been deprecated in favor of the root endpoint. It redirects to the new endpoint."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "301", 
+            description = "Redirect to the new endpoint", 
+            content = @Content(schema = @Schema(implementation = String.class))
+        )
+    })
     @PostMapping("/run")
     public Mono<ResponseEntity<String>> removedEndpoint() {
         logger.warn("The /run endpoint has been removed. Please use the root endpoint (/api/backtest) instead.");
@@ -67,13 +87,38 @@ public class BacktestController {
      * @param initialCapital the initial capital
      * @return a ResponseEntity containing the backtest results
      */
+    @Operation(
+        summary = "Run a simple backtest with URL parameters",
+        description = "Executes a backtest using query parameters for simpler use cases without customized algorithm parameters"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Backtest completed successfully", 
+            content = @Content(schema = @Schema(implementation = BacktestResult.class))
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid parameters provided"),
+        @ApiResponse(responseCode = "404", description = "Resources not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error during backtest")
+    })
     @GetMapping("/run-simple")
     public Mono<ResponseEntity<BacktestResult>> runSimpleBacktest(
+            @Parameter(description = "The ID of the trading algorithm to backtest", required = true)
             @RequestParam String algorithmId,
+            
+            @Parameter(description = "The exchange name (e.g., 'Kraken', 'Coinbase')", required = true)
             @RequestParam String exchange,
+            
+            @Parameter(description = "The trading pair in the format 'BTC-USD'", required = true)
             @RequestParam String tradingPair,
+            
+            @Parameter(description = "The start time in ISO format (e.g., '2023-01-01T00:00:00')", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            
+            @Parameter(description = "The end time in ISO format (e.g., '2023-01-01T00:00:00')", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            
+            @Parameter(description = "The initial capital to use for the backtest (default: 10000.0)")
             @RequestParam(defaultValue = "10000.0") double initialCapital) {
         
         // Get the algorithm
@@ -108,8 +153,25 @@ public class BacktestController {
      * @param backtestRequest the backtest parameters
      * @return a ResponseEntity containing the backtest results
      */
+    @Operation(
+        summary = "Run a backtest with custom parameters",
+        description = "Executes a comprehensive backtest with customizable algorithm parameters, time ranges, and initial capital"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Backtest completed successfully", 
+            content = @Content(schema = @Schema(implementation = BacktestResult.class))
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid parameters provided"),
+        @ApiResponse(responseCode = "404", description = "Resources not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error during backtest", 
+            content = @Content(schema = @Schema(implementation = BacktestResult.class)))
+    })
     @PostMapping("")
     public Mono<ResponseEntity<BacktestResult>> runBacktest(
+            @Parameter(description = "The backtest configuration parameters including algorithm, time range, and custom parameters",
+                      required = true)
             @RequestBody Map<String, Object> backtestRequest) {
         
         try {
@@ -243,11 +305,32 @@ public class BacktestController {
      * @param endTime the end time
      * @return a ResponseEntity with the historical data
      */
+    @Operation(
+        summary = "Retrieve historical market data",
+        description = "Diagnostic endpoint that fetches historical market data for a specific trading pair within a time range"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Historical data retrieved successfully", 
+            content = @Content(schema = @Schema(implementation = MarketData.class, type = "array"))
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid parameters provided"),
+        @ApiResponse(responseCode = "404", description = "No historical data found"),
+        @ApiResponse(responseCode = "500", description = "Error fetching historical data")
+    })
     @GetMapping("/test-historical-data")
     public Mono<ResponseEntity<List<MarketData>>> testHistoricalData(
+            @Parameter(description = "The exchange name (e.g., 'Kraken', 'Coinbase')", required = true)
             @RequestParam String exchange,
+            
+            @Parameter(description = "The trading pair in the format 'BTC-USD'", required = true)
             @RequestParam String tradingPair,
+            
+            @Parameter(description = "The start time in ISO format (e.g., '2023-01-01T00:00:00')", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            
+            @Parameter(description = "The end time in ISO format (e.g., '2023-01-01T00:00:00')", required = true)
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
         
         logger.info("Testing historical data fetch for {} {} from {} to {}", 
