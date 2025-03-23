@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { background: #4285f4; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .alert-danger { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .alert-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Login</h1>
+        
+        <div th:if="${param.error}" class="alert alert-danger">
+            Login failed. Please try again.
+        </div>
+        
+        <div th:if="${param.logout}" class="alert alert-success">
+            You have been logged out successfully.
+        </div>
+        
+        <div th:if="${param.success}" class="alert alert-success">
+            Login successful! <a href="/auth-test">Check your authentication status</a>
+        </div>
+        
+        <form id="loginForm" method="post" action="/direct-login">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" value="dev" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" value="dev" required>
+            </div>
+            
+            <button type="submit">Login</button>
+        </form>
+
+        <div style="margin-top: 20px;">
+            <h3>Direct Access Links</h3>
+            <ul>
+                <li><a href="/auth-test">Check Authentication Status</a></li>
+                <li><a href="/">Go to Home Page</a></li>
+                <li><a href="/logout">Logout</a></li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h3>Test Credentials</h3>
+            <p>Username: <code>dev</code></p>
+            <p>Password: <code>dev</code></p>
+        </div>
+    </div>
+</body>
+</html>

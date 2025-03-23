@@ -228,17 +228,27 @@ public class SecurityConfig {
     public UserDetailsService userDetailsService() {
         InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
         
-        if (clientRegistrationRepository == null) {
-            // For development mode, create a test user that works with any password
-            PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
-            manager.createUser(User.withUsername("dev")
-                .password(encoder.encode("dev"))
-                .roles("USER")
-                .build());
+        // Create a test user for development
+        PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        manager.createUser(User.withUsername("dev")
+            .password(encoder.encode("dev"))
+            .roles("USER")
+            .build());
                 
-            logger.info("Created development user 'dev' with password 'dev'");
-        }
+        logger.info("Created development user 'dev' with password 'dev'");
         
         return manager;
+    }
+    
+    /**
+     * Bean to expose the AuthenticationManager for programmatic authentication
+     */
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        return http.getSharedObject(AuthenticationManagerBuilder.class)
+                .userDetailsService(userDetailsService())
+                .passwordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder())
+                .and()
+                .build();
     }
 }
