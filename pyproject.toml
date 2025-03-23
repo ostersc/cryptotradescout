@@ -1,5 +1,0 @@
-[project]
-name = "repl-nix-workspace"
-version = "0.1.0"
-description = "Cryptocurrency Trading Platform with SpringBoot"
-dependencies = []
