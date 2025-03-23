@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Developer Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 400px; margin: 50px auto; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+        .btn { background: #4285f4; color: white; border: none; padding: 10px 15px; cursor: pointer; display: block; width: 100%; }
+        h1 { text-align: center; color: #333; }
+        .info { background-color: #e7f3fe; border-left: 6px solid #2196F3; padding: 10px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Developer Login</h1>
+        
+        <div class="info">
+            <p>This is a simplified login page for development purposes only.</p>
+            <p>Clicking the button below will log you in as a developer with full access.</p>
+        </div>
+        
+        <form id="devLoginForm" method="post" action="/auth/dev-login">
+            <input type="hidden" name="username" value="dev">
+            <button type="submit" class="btn">Login as Developer</button>
+        </form>
+        
+        <div style="margin-top: 20px; text-align: center;">
+            <a href="/">Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

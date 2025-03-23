@@ -67,7 +67,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authorize -> authorize
                 // These paths are accessible without authentication
-                .requestMatchers("/", "/home", "/login", "/error", "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
+                .requestMatchers("/", "/home", "/login", "/simple-login", "/dev-login", "/auth/dev-login", "/error", "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/webjars/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 // These paths require authentication
