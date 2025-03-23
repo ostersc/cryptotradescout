@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,18 +11,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2UserAuthority;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
@@ -75,8 +83,8 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/dashboard", true)
             );
         } else {
-            logger.warn("OAuth2 login is not configured. All endpoints will be accessible without authentication.");
-            // In the case where OAuth2 is not configured, we still need basic form login for testing
+            logger.warn("OAuth2 login is not configured. Development mode is enabled with all endpoints accessible.");
+            // In development mode, we'll simply allow all access without login
             http.formLogin(form -> form
                 .loginPage("/login")
                 .permitAll()
@@ -196,5 +204,26 @@ public class SecurityConfig {
         }
         
         return false;
+    }
+    
+    /**
+     * Bean to configure a UserDetailsService for development mode
+     */
+    @Bean
+    public UserDetailsService userDetailsService() {
+        InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
+        
+        if (clientRegistrationRepository == null) {
+            // For development mode, create a test user that works with any password
+            PasswordEncoder encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+            manager.createUser(User.withUsername("dev")
+                .password(encoder.encode("dev"))
+                .roles("USER")
+                .build());
+                
+            logger.info("Created development user 'dev' with password 'dev'");
+        }
+        
+        return manager;
     }
 }
