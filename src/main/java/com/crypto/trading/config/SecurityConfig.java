@@ -77,7 +77,9 @@ public class SecurityConfig {
         http.formLogin(form -> form
             .loginPage("/login")
             .loginProcessingUrl("/login") // URL to submit the login form
-            .defaultSuccessUrl("/dashboard", true)
+            .usernameParameter("username")
+            .passwordParameter("password")
+            .defaultSuccessUrl("/", true)
             .failureUrl("/login?error")
             .permitAll()
         );
@@ -89,10 +91,10 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .userAuthoritiesMapper(this.userAuthoritiesMapper())
                 )
-                .defaultSuccessUrl("/dashboard", true)
+                .defaultSuccessUrl("/", true)
             );
         } else {
-            logger.warn("OAuth2 login is not configured. Development mode is enabled with test user 'dev/dev'.");
+            logger.info("OAuth2 login is not configured. Development mode is enabled with test user 'dev/dev'.");
         }
         
         http.logout(logout -> logout

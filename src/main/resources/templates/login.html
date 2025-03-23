@@ -94,7 +94,7 @@
         </div>
         
         <!-- Development/Fallback Login Form -->
-        <form th:action="@{/login}" method="post" class="needs-validation" novalidate>
+        <form action="/login" method="post" class="needs-validation" novalidate>
             <div class="mb-3">
                 <label for="username" class="form-label">Username</label>
                 <input type="text" class="form-control" id="username" name="username" required>
@@ -110,6 +110,8 @@
             <div class="d-grid">
                 <button type="submit" class="btn btn-primary">Sign In</button>
             </div>
+            <!-- Add a hidden field for CSRF protection -->
+            <input type="hidden" name="_csrf" th:if="${_csrf}" th:value="${_csrf.token}" />
         </form>
         
         <div class="mt-3">
