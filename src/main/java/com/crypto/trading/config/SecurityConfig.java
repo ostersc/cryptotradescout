@@ -81,7 +81,7 @@ public class SecurityConfig {
                 .loginProcessingUrl("/perform-login") // Use a different URL for processing login
                 .usernameParameter("username")
                 .passwordParameter("password")
-                .defaultSuccessUrl("/auth-test", true) // Redirect to auth-test after login
+                .defaultSuccessUrl("/", true) // Redirect to dashboard after login
                 .failureUrl("/login?error")
                 .permitAll()
             )
@@ -101,7 +101,7 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .userAuthoritiesMapper(this.userAuthoritiesMapper())
                 )
-                .defaultSuccessUrl("/auth-test", true)
+                .defaultSuccessUrl("/", true)
             );
         } else {
             logger.info("OAuth2 login is not configured. Development mode is enabled with test user 'dev/dev'.");
