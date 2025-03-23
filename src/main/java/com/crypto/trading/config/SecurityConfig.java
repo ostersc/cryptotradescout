@@ -39,9 +39,14 @@ public class SecurityConfig {
             http.csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
                     .requestMatchers("/api/public/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**").permitAll()
+                    .requestMatchers("/swagger-ui/**").permitAll()
+                    .requestMatchers("/swagger-ui.html").permitAll()
+                    .requestMatchers("/h2-console/**").permitAll()
                     .requestMatchers("/api/**").authenticated()
                     .anyRequest().authenticated()
                 )
+                .headers(headers -> headers.frameOptions().disable())  // For H2 Console
                 .httpBasic(withDefaults());
         }
         
