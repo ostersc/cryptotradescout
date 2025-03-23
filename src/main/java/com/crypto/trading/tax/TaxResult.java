@@ -1,12 +1,21 @@
 package com.crypto.trading.tax;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Represents the result of a tax calculation for a cryptocurrency sale.
  * Contains information about total gains, short-term gains, and long-term gains.
  */
+@Schema(description = "Tax calculation result for cryptocurrency transactions", 
+        name = "TaxResult")
 public class TaxResult {
+    @Schema(description = "Total capital gain for the transaction", example = "2500.00")
     private final double totalGain;
+    
+    @Schema(description = "Short-term capital gain (assets held < 1 year)", example = "1500.00")
     private final double shortTermGain;
+    
+    @Schema(description = "Long-term capital gain (assets held >= 1 year)", example = "1000.00")
     private final double longTermGain;
     
     /**
