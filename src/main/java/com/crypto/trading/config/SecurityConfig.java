@@ -1,55 +1,200 @@
 package com.crypto.trading.config;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
+import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
+import org.springframework.security.oauth2.core.user.OAuth2UserAuthority;
 import org.springframework.security.web.SecurityFilterChain;
-import static org.springframework.security.config.Customizer.withDefaults;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-/**
- * Security configuration for the application.
- * This class handles API security, authentication, and access control.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Value("${trading.security.enabled:true}")
-    private boolean securityEnabled;
+    @Value("${app.auth.allowed-emails:}")
+    private List<String> allowedEmails;
+    
+    @Value("${app.auth.allowed-domains:}")
+    private List<String> allowedDomains;
 
-    /**
-     * Configures the security filter chain for HTTP requests.
-     * For simplicity in a development environment, this may disable CSRF protection
-     * and allow certain endpoints without authentication.
-     * 
-     * @param http The HttpSecurity to configure
-     * @return The configured SecurityFilterChain
-     * @throws Exception if configuration fails
-     */
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        if (!securityEnabled) {
-            http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(authorize -> authorize
-                    .anyRequest().permitAll()
-                );
+    private final ClientRegistrationRepository clientRegistrationRepository;
+
+    @Autowired(required = false)
+    public SecurityConfig(ClientRegistrationRepository clientRegistrationRepository) {
+        this.clientRegistrationRepository = clientRegistrationRepository;
+        if (clientRegistrationRepository == null) {
+            logger.warn("ClientRegistrationRepository is null. OAuth2 login will not be available.");
         } else {
-            http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(authorize -> authorize
-                    .requestMatchers("/api/public/**").permitAll()
-                    .requestMatchers("/v3/api-docs/**").permitAll()
-                    .requestMatchers("/swagger-ui/**").permitAll()
-                    .requestMatchers("/swagger-ui.html").permitAll()
-                    .requestMatchers("/h2-console/**").permitAll()
-                    .requestMatchers("/api/**").authenticated()
-                    .anyRequest().authenticated()
+            logger.info("ClientRegistrationRepository initialized successfully. OAuth2 login is available.");
+        }
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            // Disable CSRF for simplicity in development mode
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/", "/login", "/error", "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
+                .requestMatchers("/api/v1/public/**").permitAll()
+                .requestMatchers("/webjars/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                // In development mode without OAuth2 configured, allow all access
+                .requestMatchers("/**").permitAll()
+            );
+            
+        // Only configure OAuth2 login if we have a client registration repository
+        if (clientRegistrationRepository != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                .loginPage("/login")
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userAuthoritiesMapper(this.userAuthoritiesMapper())
                 )
-                .headers(headers -> headers.frameOptions().disable())  // For H2 Console
-                .httpBasic(withDefaults());
+                .defaultSuccessUrl("/dashboard", true)
+            );
+        } else {
+            logger.warn("OAuth2 login is not configured. All endpoints will be accessible without authentication.");
+            // In the case where OAuth2 is not configured, we still need basic form login for testing
+            http.formLogin(form -> form
+                .loginPage("/login")
+                .permitAll()
+                .defaultSuccessUrl("/dashboard", true)
+            );
         }
         
+        http.logout(logout -> logout
+            .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+            .logoutSuccessHandler(oidcLogoutSuccessHandler())
+            .invalidateHttpSession(true)
+            .clearAuthentication(true)
+            .deleteCookies("JSESSIONID")
+        );
+
         return http.build();
+    }
+
+    @Bean
+    public LogoutSuccessHandler oidcLogoutSuccessHandler() {
+        if (this.clientRegistrationRepository != null) {
+            OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
+                    new OidcClientInitiatedLogoutSuccessHandler(this.clientRegistrationRepository);
+            
+            // Set the URL that the user is redirected to after logging out
+            oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}");
+            
+            return oidcLogoutSuccessHandler;
+        } else {
+            // Fallback to simple logout handler when OAuth2 is not configured
+            SimpleUrlLogoutSuccessHandler logoutSuccessHandler = new SimpleUrlLogoutSuccessHandler();
+            logoutSuccessHandler.setDefaultTargetUrl("/login?logout");
+            return logoutSuccessHandler;
+        }
+    }
+
+    private GrantedAuthoritiesMapper userAuthoritiesMapper() {
+        return (authorities) -> {
+            Set<GrantedAuthority> mappedAuthorities = new HashSet<>();
+            
+            authorities.forEach(authority -> {
+                boolean isAuthorized = false;
+                String email = null;
+                String hd = null; // hosted domain
+                
+                if (authority instanceof OidcUserAuthority) {
+                    OidcUserAuthority oidcUserAuthority = (OidcUserAuthority) authority;
+                    OidcIdToken idToken = oidcUserAuthority.getIdToken();
+                    OidcUserInfo userInfo = oidcUserAuthority.getUserInfo();
+                    
+                    // Extract email and domain information
+                    if (userInfo != null) {
+                        email = userInfo.getEmail();
+                        hd = userInfo.getClaimAsString("hd"); // Google Workspace domain
+                    } else if (idToken != null) {
+                        email = idToken.getEmail();
+                        hd = idToken.getClaimAsString("hd");
+                    }
+                    
+                    // Check if MFA/2FA was used
+                    boolean usedMfa = idToken != null && 
+                                      idToken.getClaimAsBoolean("amr") != null && 
+                                      Arrays.asList(idToken.getClaimAsStringList("amr")).contains("mfa");
+                    
+                    // Only authorize if MFA was used
+                    if (usedMfa && isAllowedUser(email, hd)) {
+                        isAuthorized = true;
+                        mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+                    }
+                    
+                } else if (authority instanceof OAuth2UserAuthority) {
+                    OAuth2UserAuthority oauth2UserAuthority = (OAuth2UserAuthority) authority;
+                    
+                    email = oauth2UserAuthority.getAttributes().get("email").toString();
+                    if (oauth2UserAuthority.getAttributes().containsKey("hd")) {
+                        hd = oauth2UserAuthority.getAttributes().get("hd").toString();
+                    }
+                    
+                    // For OAuth2 users, we can't easily check MFA, 
+                    // so we rely only on email allowlist
+                    if (isAllowedUser(email, hd)) {
+                        isAuthorized = true;
+                        mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+                    }
+                }
+                
+                // If not authorized by email or missing MFA, don't add ROLE_USER
+                if (!isAuthorized && mappedAuthorities.isEmpty()) {
+                    // Add a limited role to show access denied page
+                    mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_UNAUTHORIZED"));
+                }
+            });
+            
+            return mappedAuthorities;
+        };
+    }
+    
+    private boolean isAllowedUser(String email, String domain) {
+        if (email == null) {
+            return false;
+        }
+        
+        // Check if email directly in allowed list
+        if (allowedEmails != null && !allowedEmails.isEmpty() && allowedEmails.contains(email)) {
+            return true;
+        }
+        
+        // Check if domain in allowed domains
+        if (domain != null && allowedDomains != null && !allowedDomains.isEmpty() && allowedDomains.contains(domain)) {
+            return true;
+        }
+        
+        // Check if email domain matches any in allowed domains
+        if (allowedDomains != null && !allowedDomains.isEmpty()) {
+            String emailDomain = email.substring(email.indexOf('@') + 1);
+            return allowedDomains.contains(emailDomain);
+        }
+        
+        return false;
     }
 }

@@ -170,6 +170,11 @@ public class EmailNotificationService implements NotificationService {
      * @return a Mono that completes when the email is sent
      */
     private Mono<Void> sendEmail(String subject, String body) {
+        if (!emailEnabled) {
+            logger.info("Email notifications are disabled. Would have sent: {}", subject);
+            return Mono.empty();
+        }
+        
         return Mono.fromRunnable(() -> {
             try {
                 MimeMessage message = mailSender.createMimeMessage();
@@ -184,10 +189,15 @@ public class EmailNotificationService implements NotificationService {
                 logger.info("Sent email notification: {}", subject);
             } catch (MessagingException e) {
                 logger.error("Failed to send email notification", e);
-                throw new RuntimeException("Failed to send email notification", e);
+                // Log but don't throw exception to prevent application failures
+                // when email sending is not critical
             }
         })
         .subscribeOn(Schedulers.boundedElastic())
+        .onErrorResume(e -> {
+            logger.error("Error sending email: {}", e.getMessage());
+            return Mono.empty();
+        })
         .then();
     }
 }
