@@ -15,6 +15,11 @@
                         <h2>Authentication Status</h2>
                     </div>
                     <div class="card-body">
+                        <div th:if="${param.success}" class="alert alert-info">
+                            <h4>Login Successful!</h4>
+                            <p>You have been successfully authenticated to the system.</p>
+                        </div>
+                        
                         <div th:if="${#authentication != null && #authentication.isAuthenticated() && !#strings.equals(#authentication.getPrincipal(), 'anonymousUser')}" class="alert alert-success">
                             <h4>You are authenticated!</h4>
                             <p>Username: <span th:text="${#authentication.name}">username</span></p>

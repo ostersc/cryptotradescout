@@ -34,6 +34,7 @@ public class BasicLoginController {
         // Set the authentication in the context
         SecurityContextHolder.getContext().setAuthentication(auth);
         
-        return "redirect:/auth-test";
+        // Redirect to auth-test with a success parameter for visual feedback
+        return "redirect:/auth-test?success=true";
     }
 }
