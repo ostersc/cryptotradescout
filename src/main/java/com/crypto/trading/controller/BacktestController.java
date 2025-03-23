@@ -49,32 +49,7 @@ public class BacktestController {
         this.algorithmRegistry = algorithmRegistry;
     }
     
-    /**
-     * Run a backtest with the specified parameters (endpoint removed to simplify API).
-     * All functionality has been consolidated into the root endpoint.
-     * 
-     * This method is kept as a placeholder to indicate that this endpoint was 
-     * intentionally removed as part of code simplification.
-     */
-    @Operation(
-        summary = "Deprecated backtest endpoint",
-        description = "This endpoint has been deprecated in favor of the root endpoint. It redirects to the new endpoint."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "301", 
-            description = "Redirect to the new endpoint", 
-            content = @Content(schema = @Schema(implementation = String.class))
-        )
-    })
-    @PostMapping("/run")
-    public Mono<ResponseEntity<String>> removedEndpoint() {
-        logger.warn("The /run endpoint has been removed. Please use the root endpoint (/api/backtest) instead.");
-        return Mono.just(ResponseEntity
-                .status(301)
-                .header("Location", "/api/backtest")
-                .body("This endpoint has been deprecated. Please use /api/backtest instead."));
-    }
+    // Removed deprecated "/run" endpoint
     
     /**
      * Run a backtest with URL parameters for simpler use cases.

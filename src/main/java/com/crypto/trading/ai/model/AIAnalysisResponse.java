@@ -3,9 +3,15 @@ package com.crypto.trading.ai.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Response model for AI market analysis results.
  */
+@Schema(
+    description = "AI market analysis results with algorithm recommendations and trading insights",
+    name = "AIAnalysisResponse"
+)
 public class AIAnalysisResponse {
     private String marketTrend;
     private String marketSentiment;
