@@ -15,6 +15,14 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import java.time.Duration;
 import java.util.Map;
 
@@ -24,6 +32,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/trading")
+@Tag(name = "Trading", description = "Cryptocurrency trading operations API")
 public class TradingController {
     private static final Logger logger = LoggerFactory.getLogger(TradingController.class);
     
@@ -45,9 +54,31 @@ public class TradingController {
      * @param tradingPair the trading pair
      * @return a ResponseEntity containing the market data
      */
+    @Operation(
+        summary = "Get current market data",
+        description = "Retrieves real-time market data for a specific trading pair on a given exchange",
+        tags = { "Trading", "Market Data" }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Market data retrieved successfully",
+            content = @Content(schema = @Schema(implementation = MarketData.class))
+        ),
+        @ApiResponse(
+            responseCode = "404", 
+            description = "Trading pair or exchange not found"
+        ),
+        @ApiResponse(
+            responseCode = "500", 
+            description = "Internal server error while retrieving market data"
+        )
+    })
     @GetMapping("/market-data")
     public Mono<ResponseEntity<MarketData>> getMarketData(
+            @Parameter(description = "Exchange name (e.g., Kraken, Coinbase)", required = true)
             @RequestParam String exchange,
+            @Parameter(description = "Trading pair (e.g., BTC-USD, ETH-USD)", required = true)
             @RequestParam String tradingPair) {
         
         logger.info("Request for market data: {} on {}", tradingPair, exchange);
@@ -72,9 +103,26 @@ public class TradingController {
      * @param tradingPair the trading pair
      * @return a Flux of server-sent events containing market data
      */
+    @Operation(
+        summary = "Get streaming market data",
+        description = "Provides a continuous stream of real-time market data updates for a specific trading pair using Server-Sent Events",
+        tags = { "Trading", "Market Data", "Streaming" }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Stream of market data established successfully",
+            content = @Content(
+                mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
+                schema = @Schema(implementation = MarketData.class)
+            )
+        )
+    })
     @GetMapping(value = "/market-data-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<MarketData> getMarketDataStream(
+            @Parameter(description = "Exchange name (e.g., Kraken, Coinbase)", required = true)
             @RequestParam String exchange,
+            @Parameter(description = "Trading pair (e.g., BTC-USD, ETH-USD)", required = true)
             @RequestParam String tradingPair) {
         
         logger.info("Request for market data stream: {} on {}", tradingPair, exchange);
@@ -89,8 +137,34 @@ public class TradingController {
      * @param orderRequest the order details
      * @return a ResponseEntity containing the executed order
      */
+    @Operation(
+        summary = "Execute a market order",
+        description = "Places a market order on the specified exchange for the given trading pair",
+        tags = { "Trading", "Orders" }
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Order executed successfully",
+            content = @Content(schema = @Schema(implementation = Order.class))
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Invalid request parameters"
+        ),
+        @ApiResponse(
+            responseCode = "404", 
+            description = "Exchange or trading pair not found"
+        ),
+        @ApiResponse(
+            responseCode = "500", 
+            description = "Error executing the order"
+        )
+    })
     @PostMapping("/execute-market-order")
-    public Mono<ResponseEntity<Order>> executeMarketOrder(@RequestBody Map<String, Object> orderRequest) {
+    public Mono<ResponseEntity<Order>> executeMarketOrder(
+            @Parameter(description = "Order details including exchange, tradingPair, side (buy/sell), and amount", required = true)
+            @RequestBody Map<String, Object> orderRequest) {
         logger.info("Request to execute market order: {}", orderRequest);
         
         String exchange = (String) orderRequest.get("exchange");
