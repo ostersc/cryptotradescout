@@ -1,15 +1,26 @@
 package com.crypto.trading.tax;
 
 import java.time.LocalDateTime;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * Represents a tax lot for a cryptocurrency purchase.
  * Used to track cost basis and holding period for tax purposes.
  */
+@Schema(description = "Tax lot for tracking cryptocurrency purchases and cost basis", 
+        name = "TaxLot")
 public class TaxLot {
+    @Schema(description = "Original amount of cryptocurrency in this lot", example = "0.5")
     private final double amount;
+    
+    @Schema(description = "Cost basis per unit in USD", example = "42500.00")
     private final double costBasis;
+    
+    @Schema(description = "Date and time when the cryptocurrency was purchased", 
+            example = "2025-01-15T14:30:00")
     private final LocalDateTime purchaseDate;
+    
+    @Schema(description = "Remaining amount of cryptocurrency in this lot", example = "0.35")
     private double remainingAmount;
     
     /**

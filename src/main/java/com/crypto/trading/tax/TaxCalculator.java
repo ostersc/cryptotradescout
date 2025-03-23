@@ -4,12 +4,18 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Calculator for tax implications of cryptocurrency trades.
  * Implements FIFO (First-In, First-Out) accounting method for cost basis.
  * Tracks long-term vs. short-term capital gains.
  */
+@Schema(description = "Tax calculator for cryptocurrency trades using FIFO accounting method", 
+        name = "TaxCalculator")
 public class TaxCalculator {
+    @Schema(description = "List of tax lots representing cryptocurrency purchases", 
+            implementation = TaxLot.class)
     private final List<TaxLot> lots;
     
     /**
