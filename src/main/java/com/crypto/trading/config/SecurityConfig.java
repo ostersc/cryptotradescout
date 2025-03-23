@@ -73,7 +73,16 @@ public class SecurityConfig {
                 .requestMatchers("/**").permitAll()
             );
             
-        // Only configure OAuth2 login if we have a client registration repository
+        // For all modes, configure form login
+        http.formLogin(form -> form
+            .loginPage("/login")
+            .loginProcessingUrl("/login") // URL to submit the login form
+            .defaultSuccessUrl("/dashboard", true)
+            .failureUrl("/login?error")
+            .permitAll()
+        );
+            
+        // Configure OAuth2 login if available
         if (clientRegistrationRepository != null) {
             http.oauth2Login(oauth2 -> oauth2
                 .loginPage("/login")
@@ -83,13 +92,7 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/dashboard", true)
             );
         } else {
-            logger.warn("OAuth2 login is not configured. Development mode is enabled with all endpoints accessible.");
-            // In development mode, we'll simply allow all access without login
-            http.formLogin(form -> form
-                .loginPage("/login")
-                .permitAll()
-                .defaultSuccessUrl("/dashboard", true)
-            );
+            logger.warn("OAuth2 login is not configured. Development mode is enabled with test user 'dev/dev'.");
         }
         
         http.logout(logout -> logout
