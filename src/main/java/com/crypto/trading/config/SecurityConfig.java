@@ -66,23 +66,33 @@ public class SecurityConfig {
             // Disable CSRF for simplicity in development mode
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/", "/login", "/error", "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
+                // These paths are accessible without authentication
+                .requestMatchers("/", "/home", "/login", "/error", "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/webjars/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                // In development mode without OAuth2 configured, allow all access
+                // These paths require authentication
+                .requestMatchers("/dashboard", "/auth-test", "/api/v1/private/**").authenticated()
+                // All other paths are accessible without authentication (for development)
                 .requestMatchers("/**").permitAll()
+            )
+            // Configure form login
+            .formLogin(form -> form
+                .loginPage("/login")
+                .loginProcessingUrl("/perform-login") // Use a different URL for processing login
+                .usernameParameter("username")
+                .passwordParameter("password")
+                .defaultSuccessUrl("/auth-test", true) // Redirect to auth-test after login
+                .failureUrl("/login?error")
+                .permitAll()
+            )
+            // Logout configuration
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login?logout")
+                .invalidateHttpSession(true)
+                .clearAuthentication(true)
+                .deleteCookies("JSESSIONID")
             );
-            
-        // For all modes, configure form login
-        http.formLogin(form -> form
-            .loginPage("/login")
-            .loginProcessingUrl("/login") // URL to submit the login form
-            .usernameParameter("username")
-            .passwordParameter("password")
-            .defaultSuccessUrl("/", true)
-            .failureUrl("/login?error")
-            .permitAll()
-        );
             
         // Configure OAuth2 login if available
         if (clientRegistrationRepository != null) {
@@ -91,7 +101,7 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .userAuthoritiesMapper(this.userAuthoritiesMapper())
                 )
-                .defaultSuccessUrl("/", true)
+                .defaultSuccessUrl("/auth-test", true)
             );
         } else {
             logger.info("OAuth2 login is not configured. Development mode is enabled with test user 'dev/dev'.");
