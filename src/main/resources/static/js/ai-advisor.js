@@ -630,10 +630,7 @@ function applyBacktestParameters(inputElements, params, algorithmId) {
         setDefaultDates();
     }
     
-    if (parameterCount > 0) {
-        // Show a confirmation alert
-        alert(`Parameters for ${algorithmId} have been set. You can now run a backtest with these optimized parameters.`);
-    } else {
+    if (parameterCount <= 0) {
         console.error('No backtest parameters were set. Parameter names may not match.');
         alert('Could not set all backtest parameters. Please check and manually adjust as needed.');
     }
