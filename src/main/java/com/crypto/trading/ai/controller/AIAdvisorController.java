@@ -11,11 +11,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Controller for AI-powered trading strategy recommendations.
  */
 @RestController
 @RequestMapping("/api/v1/ai")
+@Tag(name = "AI Advisor", description = "API for AI-powered trading strategy recommendations and market analysis")
 public class AIAdvisorController {
     private static final Logger logger = LoggerFactory.getLogger(AIAdvisorController.class);
     
@@ -34,9 +43,26 @@ public class AIAdvisorController {
      * @param tradingPair The trading pair
      * @return AIAnalysisResponse with market analysis and algorithm recommendations
      */
+    @Operation(
+        summary = "Get AI trading recommendations",
+        description = "Analyzes current market conditions and provides AI-powered trading strategy recommendations " +
+                "with optimized parameters for the specified exchange and trading pair"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Successfully generated trading recommendations",
+            content = @Content(schema = @Schema(implementation = AIAnalysisResponse.class))
+        ),
+        @ApiResponse(responseCode = "400", description = "Invalid parameters provided"),
+        @ApiResponse(responseCode = "500", description = "Error generating AI recommendations")
+    })
     @GetMapping("/recommendations")
     public ResponseEntity<AIAnalysisResponse> getRecommendations(
+            @Parameter(description = "The exchange name (e.g., 'Kraken', 'Coinbase')", required = true)
             @RequestParam String exchange,
+            
+            @Parameter(description = "The trading pair in the format 'BTC-USD'", required = true)
             @RequestParam String tradingPair) {
         
         logger.info("Received request for AI recommendations for {}/{}", exchange, tradingPair);
