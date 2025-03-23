@@ -4,41 +4,70 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * Represents a cryptocurrency order with details like trading pair, type, amount, and price.
  * Enhanced with fee and tax tracking capabilities.
  */
+@Schema(
+    description = "Cryptocurrency order with fee and tax tracking capability",
+    name = "Order"
+)
 public class Order {
+    @Schema(description = "Unique identifier for the order", example = "ord-123456")
     private String id;
+    
+    @Schema(description = "Trading pair for the order", example = "BTC-USD")
     private String tradingPair;
+    
+    @Schema(description = "Type of order (BUY, SELL)", example = "BUY")
     private OrderType type;
+    
+    @Schema(description = "Amount of cryptocurrency to buy or sell", example = "0.5")
     private double amount;
+    
+    @Schema(description = "Price per unit of cryptocurrency", example = "83991.50")
     private double price;
+    
+    @Schema(description = "Timestamp when the order was created", example = "2025-03-23T00:51:57")
     private LocalDateTime createdAt;
+    
+    @Schema(description = "Current status of the order", example = "FILLED")
     private String status;
+    
+    @Schema(description = "Exchange where the order was placed", example = "Kraken")
     private String exchange;
+    
+    @Schema(description = "Total portfolio value at the time of this order", example = "100000.00")
     private Double totalValue; // Portfolio value at the time of the order, used for backtesting
     
     @JsonProperty("fee")
+    @Schema(description = "Exchange fee for this transaction", example = "83.99")
     private double fee; // Exchange fee for the transaction
     
     @JsonProperty("tax")
+    @Schema(description = "Estimated tax liability for this transaction", example = "1259.87")
     private double tax; // Estimated tax liability for the transaction
     
     @JsonProperty("feeRate")
+    @Schema(description = "Fee rate applied to this order (e.g., 0.002 for 0.2%)", example = "0.002")
     private double feeRate; // Fee rate applied to this order (e.g., 0.001 for 0.1%)
     
     @JsonProperty("taxRate")
+    @Schema(description = "Tax rate applied to this order", example = "0.15")
     private double taxRate; // Tax rate applied to this order
     
     @JsonProperty("taxableGain")
+    @Schema(description = "Total taxable gain for this transaction", example = "8399.15")
     private double taxableGain; // Total taxable gain for this transaction
     
     @JsonProperty("shortTermGain")
+    @Schema(description = "Short-term capital gain (held < 1 year)", example = "8399.15")
     private double shortTermGain; // Short-term capital gain (held < 1 year)
     
     @JsonProperty("longTermGain")
+    @Schema(description = "Long-term capital gain (held >= 1 year)", example = "0.00")
     private double longTermGain; // Long-term capital gain (held >= 1 year)
 
     /**
@@ -342,6 +371,7 @@ public class Order {
      * The currency/asset in which the fee is denominated.
      */
     @JsonProperty("feeAsset")
+    @Schema(description = "Currency/asset in which the fee is denominated", example = "USD")
     private String feeAsset;
     
     /**
@@ -366,6 +396,7 @@ public class Order {
      * Estimated tax liability for this transaction.
      */
     @JsonProperty("estimatedTaxLiability")
+    @Schema(description = "Estimated tax liability for this transaction", example = "1259.87")
     private double estimatedTaxLiability;
     
     /**
