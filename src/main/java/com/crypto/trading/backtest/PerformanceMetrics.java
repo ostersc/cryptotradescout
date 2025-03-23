@@ -1,10 +1,16 @@
 package com.crypto.trading.backtest;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Contains various performance metrics for evaluating trading algorithm performance.
  * Used to assess the quality of a trading strategy during backtesting.
  * Enhanced with fee and tax tracking.
  */
+@Schema(
+    description = "Performance metrics for evaluating trading algorithm effectiveness",
+    name = "PerformanceMetrics"
+)
 public class PerformanceMetrics {
     private final double totalProfit;
     private final double totalReturnPercentage;

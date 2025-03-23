@@ -3,17 +3,36 @@ package com.crypto.trading.exchange.model;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Represents market data for a cryptocurrency trading pair.
  * This includes price information, volume, and timestamp.
  */
+@Schema(
+    description = "Market data for a cryptocurrency trading pair including price information and volume",
+    name = "MarketData"
+)
 public class MarketData {
+    @Schema(description = "Trading pair identifier (e.g., BTC-USD)", example = "BTC-USD")
     private String tradingPair;
+    
+    @Schema(description = "Highest buy price currently available", example = "83991.40")
     private double bidPrice;
+    
+    @Schema(description = "Lowest sell price currently available", example = "83991.50")
     private double askPrice;
+    
+    @Schema(description = "Price of the most recent trade", example = "83991.50")
     private double lastPrice;
+    
+    @Schema(description = "Trading volume in the base currency over the last 24 hours", example = "433.43")
     private double volume;
+    
+    @Schema(description = "Timestamp when this data was recorded", example = "2025-03-23T00:50:47")
     private LocalDateTime timestamp;
+    
+    @Schema(description = "Name of the exchange providing this data", example = "Kraken")
     private String exchange;
 
     /**

@@ -5,10 +5,16 @@ import com.crypto.trading.exchange.model.Order;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Represents the results of a backtest run for a trading algorithm.
  * Contains the details of the backtest and its performance metrics.
  */
+@Schema(
+    description = "Backtest results containing performance metrics and executed trades",
+    name = "BacktestResult"
+)
 public class BacktestResult {
     private final String algorithmId;
     private final String exchange;

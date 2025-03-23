@@ -2,9 +2,15 @@ package com.crypto.trading.ai.model;
 
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Model for algorithm suggestions from AI analysis.
  */
+@Schema(
+    description = "Algorithm suggestion with confidence scores and optimized parameters",
+    name = "AlgorithmSuggestion"
+)
 public class AlgorithmSuggestion {
     private String algorithmId;
     private String algorithmName;
